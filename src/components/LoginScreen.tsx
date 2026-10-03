@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useStore } from '../store/store';
 import toast from 'react-hot-toast';
 
@@ -11,6 +11,7 @@ export default function LoginScreen({ onBack, isSwitchUser = false }: LoginScree
   const [pin, setPin] = useState('');
   const [showPin, setShowPin] = useState(false);
   const login = useStore(s => s.login);
+  const containerRef = useRef<HTMLDivElement>(null);
 
   const handleLogin = () => {
     if (pin.length < 4) {
@@ -28,6 +29,37 @@ export default function LoginScreen({ onBack, isSwitchUser = false }: LoginScree
       setPin('');
     }
   };
+
+  // Handle keyboard input
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Prevent default behavior for number keys
+      if (e.key >= '0' && e.key <= '9') {
+        e.preventDefault();
+        setPin(prev => prev.length < 6 ? prev + e.key : prev);
+      } else if (e.key === 'Backspace') {
+        e.preventDefault();
+        setPin(prev => prev.slice(0, -1));
+      } else if (e.key === 'Enter') {
+        e.preventDefault();
+        if (pin.length >= 4) {
+          handleLogin();
+        }
+      } else if (e.key === 'Escape') {
+        e.preventDefault();
+        setPin('');
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    
+    // Auto-focus the container
+    if (containerRef.current) {
+      containerRef.current.focus();
+    }
+    
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [pin, login, isSwitchUser, onBack]);
 
   const handleKeyPress = (key: string) => {
     if (key === 'del') {
@@ -58,7 +90,7 @@ export default function LoginScreen({ onBack, isSwitchUser = false }: LoginScree
         </button>
       )}
 
-      <div className="relative w-full max-w-sm">
+      <div ref={containerRef} tabIndex={-1} className="relative w-full max-w-sm outline-none">
         {/* Logo */}
         <div className="text-center mb-8">
           <div className="inline-flex items-center justify-center w-20 h-20 rounded-2xl bg-gradient-to-br from-red-500 to-orange-500 shadow-2xl shadow-red-500/30 mb-4">
@@ -73,20 +105,26 @@ export default function LoginScreen({ onBack, isSwitchUser = false }: LoginScree
 
         {/* PIN Display */}
         <div className="bg-white/5 backdrop-blur-xl rounded-2xl p-6 border border-white/10">
-          <div className="flex justify-center gap-3 mb-6">
+          <div className="flex justify-center gap-3 mb-3">
             {[0, 1, 2, 3].map(i => (
               <div
                 key={i}
                 className={`w-12 h-12 rounded-xl border-2 flex items-center justify-center text-xl font-bold transition-all ${
                   pin[i]
                     ? 'border-orange-400 bg-orange-500/20 text-orange-300'
+                    : pin.length === i
+                    ? 'border-orange-400/50 bg-white/5 text-white/30'
                     : 'border-white/20 bg-white/5 text-white/30'
                 }`}
               >
-                {pin[i] ? (showPin ? pin[i] : '•') : ''}
+                {pin[i] ? (showPin ? pin[i] : '•') : (pin.length === i ? <span className="animate-pulse">|</span> : '')}
               </div>
             ))}
           </div>
+          
+          <p className="text-center text-[10px] text-gray-500 mb-4">
+            <i className="fas fa-keyboard mr-1"></i> Type on keyboard or use number pad
+          </p>
 
           {/* Toggle PIN visibility */}
           <div className="flex justify-center mb-4">
