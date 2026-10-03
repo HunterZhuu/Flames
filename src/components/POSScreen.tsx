@@ -9,13 +9,14 @@ export default function POSScreen() {
     cart, addToCart, removeFromCart, updateCartQuantity, clearCart,
     orderType, setOrderType, tableNumber, setTableNumber,
     completeOrder, getCartSubtotal, getCartTax, getCartTotal,
-    currentUser, menuOverrides,
+    currentUser, menuOverrides, paymentMethods,
   } = useStore();
 
   const [activeCategory, setActiveCategory] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
+  const enabledPaymentMethods = paymentMethods.filter(pm => pm.enabled).sort((a, b) => a.sortOrder - b.sortOrder);
   const [showPayment, setShowPayment] = useState(false);
-  const [paymentMethod, setPaymentMethod] = useState('cash');
+  const [paymentMethod, setPaymentMethod] = useState(enabledPaymentMethods[0]?.id || 'cash');
   const [cashAmount, setCashAmount] = useState('');
   const [lastOrder, setLastOrder] = useState<any>(null);
   const [showReceipt, setShowReceipt] = useState(false);
@@ -284,12 +285,8 @@ export default function POSScreen() {
 
             <div className="p-5">
               {/* Payment Methods */}
-              <div className="grid grid-cols-3 gap-2 mb-5">
-                {[
-                  { id: 'cash', label: 'Cash', icon: 'fa-money-bill-wave' },
-                  { id: 'card', label: 'Card', icon: 'fa-credit-card' },
-                  { id: 'mobile', label: 'Mobile', icon: 'fa-mobile-screen' },
-                ].map(method => (
+              <div className={`grid gap-2 mb-5 ${enabledPaymentMethods.length <= 3 ? 'grid-cols-3' : enabledPaymentMethods.length <= 4 ? 'grid-cols-2 sm:grid-cols-4' : 'grid-cols-2 sm:grid-cols-3'}`}>
+                {enabledPaymentMethods.map(method => (
                   <button
                     key={method.id}
                     onClick={() => setPaymentMethod(method.id)}
@@ -299,8 +296,8 @@ export default function POSScreen() {
                         : 'border-gray-100 hover:border-gray-200'
                     }`}
                   >
-                    <i className={`fas ${method.icon} text-lg ${paymentMethod === method.id ? 'text-orange-500' : 'text-gray-400'}`}></i>
-                    <span className="text-xs font-bold text-gray-700">{method.label}</span>
+                    <i className={`fab ${method.icon} text-lg ${paymentMethod === method.id ? 'text-orange-500' : 'text-gray-400'}`}></i>
+                    <span className="text-xs font-bold text-gray-700">{method.name}</span>
                   </button>
                 ))}
               </div>

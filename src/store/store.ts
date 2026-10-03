@@ -96,6 +96,15 @@ export interface EmailConfig {
   autoSyncOnConnect: boolean;
 }
 
+export interface PaymentMethod {
+  id: string;
+  name: string;
+  icon: string; // FontAwesome icon class (e.g. 'fa-money-bill-wave')
+  enabled: boolean;
+  color: string; // Tailwind color class
+  sortOrder: number;
+}
+
 export interface PendingEmail {
   id: string;
   orderId: string;
@@ -130,12 +139,19 @@ interface AppState {
   emailConfig: EmailConfig;
   pendingEmails: PendingEmail[];
   
+  // Payment Methods
+  paymentMethods: PaymentMethod[];
+  
   // Actions
   updateEmailConfig: (config: Partial<EmailConfig>) => void;
   addPendingEmail: (email: PendingEmail) => void;
   updatePendingEmail: (id: string, updates: Partial<PendingEmail>) => void;
   removePendingEmail: (id: string) => void;
   clearSentEmails: () => void;
+  addPaymentMethod: (method: PaymentMethod) => void;
+  updatePaymentMethod: (id: string, updates: Partial<PaymentMethod>) => void;
+  removePaymentMethod: (id: string) => void;
+  togglePaymentMethod: (id: string) => void;
   
   // Actions
   login: (pin: string) => boolean;
@@ -188,6 +204,13 @@ export const useStore = create<AppState>()(
         autoSyncOnConnect: true,
       },
       pendingEmails: [],
+      paymentMethods: [
+        { id: 'cash', name: 'Cash', icon: 'fa-money-bill-wave', enabled: true, color: 'green', sortOrder: 1 },
+        { id: 'card', name: 'Card', icon: 'fa-credit-card', enabled: true, color: 'blue', sortOrder: 2 },
+        { id: 'applepay', name: 'Apple Pay', icon: 'fa-apple', enabled: true, color: 'gray', sortOrder: 3 },
+        { id: 'googlepay', name: 'Google Pay', icon: 'fa-google', enabled: true, color: 'yellow', sortOrder: 4 },
+        { id: 'thawani', name: 'Thawani', icon: 'fa-wallet', enabled: true, color: 'purple', sortOrder: 5 },
+      ],
 
       login: (pin: string) => {
         const state = get();
@@ -324,6 +347,30 @@ export const useStore = create<AppState>()(
         set({ pendingEmails: get().pendingEmails.filter(e => e.status !== 'sent') });
       },
 
+      addPaymentMethod: (method: PaymentMethod) => {
+        set({ paymentMethods: [...get().paymentMethods, method] });
+      },
+
+      updatePaymentMethod: (id: string, updates: Partial<PaymentMethod>) => {
+        set({
+          paymentMethods: get().paymentMethods.map(pm =>
+            pm.id === id ? { ...pm, ...updates } : pm
+          ),
+        });
+      },
+
+      removePaymentMethod: (id: string) => {
+        set({ paymentMethods: get().paymentMethods.filter(pm => pm.id !== id) });
+      },
+
+      togglePaymentMethod: (id: string) => {
+        set({
+          paymentMethods: get().paymentMethods.map(pm =>
+            pm.id === id ? { ...pm, enabled: !pm.enabled } : pm
+          ),
+        });
+      },
+
       getCartSubtotal: () => {
         return get().cart.reduce((sum, item) => sum + item.product.price * item.quantity, 0);
       },
@@ -344,6 +391,7 @@ export const useStore = create<AppState>()(
         menuOverrides: state.menuOverrides,
         emailConfig: state.emailConfig,
         pendingEmails: state.pendingEmails,
+        paymentMethods: state.paymentMethods,
       }),
     }
   )

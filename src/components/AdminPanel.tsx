@@ -633,9 +633,11 @@ function MenuManager() {
 
 // Settings Panel (Email & Sync)
 function SettingsPanel() {
-  const { emailConfig, updateEmailConfig, pendingEmails, clearSentEmails, removePendingEmail } = useStore();
+  const { emailConfig, updateEmailConfig, pendingEmails, clearSentEmails, removePendingEmail, paymentMethods, addPaymentMethod, updatePaymentMethod, removePaymentMethod, togglePaymentMethod } = useStore();
   const [localConfig, setLocalConfig] = useState(emailConfig);
   const [syncing, setSyncing] = useState(false);
+  const [showAddPayment, setShowAddPayment] = useState(false);
+  const [newPayment, setNewPayment] = useState({ name: '', icon: 'fa-money-bill-wave', color: 'blue' });
 
   const handleSave = () => {
     updateEmailConfig(localConfig);
@@ -834,6 +836,156 @@ function SettingsPanel() {
           >
             <i className="fas fa-trash mr-1"></i> Clear Sent Emails
           </button>
+        )}
+      </div>
+
+      {/* Payment Methods */}
+      <div className="bg-white rounded-xl p-4 border border-gray-100">
+        <div className="flex items-center justify-between mb-3">
+          <h3 className="font-bold text-sm text-gray-800 flex items-center gap-2">
+            <i className="fas fa-credit-card text-green-500"></i>
+            Payment Methods
+          </h3>
+          <button
+            onClick={() => setShowAddPayment(true)}
+            className="px-3 py-1.5 rounded-lg bg-green-500 text-white text-xs font-bold hover:bg-green-600"
+          >
+            <i className="fas fa-plus mr-1"></i> Add
+          </button>
+        </div>
+
+        <div className="space-y-2">
+          {paymentMethods.sort((a, b) => a.sortOrder - b.sortOrder).map(method => (
+            <div key={method.id} className="flex items-center justify-between p-3 rounded-lg bg-gray-50">
+              <div className="flex items-center gap-3">
+                <i className={`fab ${method.icon} text-xl text-gray-600`}></i>
+                <div>
+                  <p className="text-xs font-bold text-gray-700">{method.name}</p>
+                  <p className="text-[10px] text-gray-400">Order: {method.sortOrder}</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => {
+                    const newOrder = prompt('Enter sort order (1-99):', method.sortOrder.toString());
+                    if (newOrder) {
+                      updatePaymentMethod(method.id, { sortOrder: parseInt(newOrder) });
+                    }
+                  }}
+                  className="w-7 h-7 rounded bg-blue-100 text-blue-600 flex items-center justify-center hover:bg-blue-200"
+                  title="Change order"
+                >
+                  <i className="fas fa-sort text-xs"></i>
+                </button>
+                <button
+                  onClick={() => {
+                    if (confirm(`Delete "${method.name}" payment method?`)) {
+                      removePaymentMethod(method.id);
+                      toast.success('Payment method deleted');
+                    }
+                  }}
+                  className="w-7 h-7 rounded bg-red-100 text-red-600 flex items-center justify-center hover:bg-red-200"
+                  title="Delete"
+                >
+                  <i className="fas fa-trash text-xs"></i>
+                </button>
+                <button
+                  onClick={() => {
+                    togglePaymentMethod(method.id);
+                    toast.success(`${method.name} ${method.enabled ? 'disabled' : 'enabled'}`);
+                  }}
+                  className={`w-10 h-5 rounded-full transition-all ${method.enabled ? 'bg-green-500' : 'bg-gray-300'}`}
+                >
+                  <div className={`w-4 h-4 rounded-full bg-white shadow transition-transform ${method.enabled ? 'translate-x-5' : 'translate-x-0.5'}`}></div>
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Add Payment Method Modal */}
+        {showAddPayment && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-xl p-5 max-w-md w-full mx-4">
+              <h3 className="font-bold text-sm text-gray-800 mb-4">Add Payment Method</h3>
+              
+              <div className="space-y-3">
+                <div>
+                  <label className="text-xs font-bold text-gray-700 mb-1 block">Name</label>
+                  <input
+                    type="text"
+                    value={newPayment.name}
+                    onChange={(e) => setNewPayment({ ...newPayment, name: e.target.value })}
+                    placeholder="e.g., Bitcoin, PayPal"
+                    className="w-full px-3 py-2 rounded-lg border border-gray-200 focus:border-green-400 focus:ring-2 focus:ring-green-100 outline-none text-sm"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-xs font-bold text-gray-700 mb-1 block">Icon (FontAwesome class)</label>
+                  <input
+                    type="text"
+                    value={newPayment.icon}
+                    onChange={(e) => setNewPayment({ ...newPayment, icon: e.target.value })}
+                    placeholder="e.g., fa-bitcoin, fa-paypal"
+                    className="w-full px-3 py-2 rounded-lg border border-gray-200 focus:border-green-400 focus:ring-2 focus:ring-green-100 outline-none text-sm"
+                  />
+                  <p className="text-[10px] text-gray-400 mt-1">Preview: <i className={`fab ${newPayment.icon} text-lg`}></i></p>
+                </div>
+
+                <div>
+                  <label className="text-xs font-bold text-gray-700 mb-1 block">Color Theme</label>
+                  <select
+                    value={newPayment.color}
+                    onChange={(e) => setNewPayment({ ...newPayment, color: e.target.value })}
+                    className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm"
+                  >
+                    <option value="blue">Blue</option>
+                    <option value="green">Green</option>
+                    <option value="purple">Purple</option>
+                    <option value="yellow">Yellow</option>
+                    <option value="red">Red</option>
+                    <option value="gray">Gray</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="flex gap-2 mt-5">
+                <button
+                  onClick={() => {
+                    if (!newPayment.name.trim()) {
+                      toast.error('Please enter a name');
+                      return;
+                    }
+                    const id = newPayment.name.toLowerCase().replace(/\s+/g, '-');
+                    addPaymentMethod({
+                      id,
+                      name: newPayment.name,
+                      icon: newPayment.icon,
+                      color: newPayment.color,
+                      enabled: true,
+                      sortOrder: paymentMethods.length + 1,
+                    });
+                    toast.success('Payment method added');
+                    setNewPayment({ name: '', icon: 'fa-money-bill-wave', color: 'blue' });
+                    setShowAddPayment(false);
+                  }}
+                  className="flex-1 py-2 rounded-lg bg-green-500 text-white font-bold text-xs hover:bg-green-600"
+                >
+                  Add
+                </button>
+                <button
+                  onClick={() => {
+                    setShowAddPayment(false);
+                    setNewPayment({ name: '', icon: 'fa-money-bill-wave', color: 'blue' });
+                  }}
+                  className="flex-1 py-2 rounded-lg bg-gray-100 text-gray-700 font-bold text-xs hover:bg-gray-200"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
         )}
       </div>
     </div>
