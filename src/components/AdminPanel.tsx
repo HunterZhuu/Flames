@@ -64,7 +64,7 @@ export default function AdminPanel() {
 
 // Dashboard
 function Dashboard() {
-  const { orders, currentUser } = useStore();
+  const { orders, currentUser, resetData } = useStore();
   
   const today = new Date();
   today.setHours(0, 0, 0, 0);
@@ -243,8 +243,13 @@ function Dashboard() {
             <button
               onClick={() => {
                 if (confirm('Are you sure you want to reset all data? This will clear:\n\n• All orders\n• Custom menu items\n• Custom images\n• Email queue\n\nThis cannot be undone!')) {
-                  useStore.getState().resetData();
-                  toast.success('System data has been reset');
+                  console.log('Resetting data...');
+                  resetData();
+                  console.log('Data reset complete');
+                  toast.success('System data has been reset! Reloading...');
+                  setTimeout(() => {
+                    window.location.reload();
+                  }, 1500);
                 }
               }}
               className="px-6 py-2.5 rounded-xl bg-red-500 text-white font-bold text-sm hover:bg-red-600 transition-all shadow-md hover:shadow-lg"

@@ -434,6 +434,8 @@ export const useStore = create<AppState>()(
       },
 
       resetData: () => {
+        console.log('Store: Resetting all data...');
+        // Clear all data from state
         set({
           orders: [],
           pendingEmails: [],
@@ -441,7 +443,9 @@ export const useStore = create<AppState>()(
           customMenuItems: [],
           removedMenuItems: [],
           menuOverrides: {},
+          cart: [],
         });
+        console.log('Store: Data reset complete');
       },
     }),
     {
