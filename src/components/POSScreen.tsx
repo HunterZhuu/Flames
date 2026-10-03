@@ -441,16 +441,29 @@ export default function POSScreen() {
                 <div className="flex justify-between text-[10px]"><span>Subtotal</span><span>OMR {lastOrder.subtotal.toFixed(3)}</span></div>
                 <div className="flex justify-between text-[10px]"><span>VAT (5%)</span><span>OMR {lastOrder.tax.toFixed(3)}</span></div>
                 <div className="flex justify-between font-bold text-xs mt-1"><span>TOTAL</span><span>OMR {lastOrder.total.toFixed(3)}</span></div>
-                <div className="border-t border-dashed border-gray-300 my-2"></div>
-                <div className="flex justify-between text-[10px]"><span>Payment</span><span className="capitalize">{lastOrder.paymentMethod}</span></div>
-                {lastOrder.paymentMethod === 'cash' && lastOrder.cashTendered !== undefined && (
-                  <>
-                    <div className="flex justify-between text-[10px]"><span>Cash Tendered</span><span>OMR {lastOrder.cashTendered.toFixed(3)}</span></div>
-                    {lastOrder.change !== undefined && lastOrder.change > 0 && (
-                      <div className="flex justify-between text-[10px] font-bold text-green-600"><span>Change</span><span>OMR {lastOrder.change.toFixed(3)}</span></div>
-                    )}
-                  </>
-                )}
+                <div className="border-t-2 border-red-500 my-2"></div>
+                <div className="bg-red-50 rounded-lg p-2 my-2">
+                  <p className="text-center text-[10px] font-bold text-red-600 mb-2">PAYMENT DETAILS</p>
+                  <div className="flex justify-between text-[10px]"><span>Payment Method:</span><span className="capitalize font-bold">{lastOrder.paymentMethod}</span></div>
+                  {lastOrder.paymentMethod === 'cash' && lastOrder.cashTendered !== undefined && (
+                    <>
+                      <div className="border-t border-dashed border-red-300 my-1"></div>
+                      <div className="flex justify-between text-[10px]"><span>Amount Paid:</span><span className="font-bold">OMR {lastOrder.cashTendered.toFixed(3)}</span></div>
+                      <div className="flex justify-between text-[10px]"><span>Total Bill:</span><span className="font-bold">OMR {lastOrder.total.toFixed(3)}</span></div>
+                      {lastOrder.change !== undefined && lastOrder.change > 0 && (
+                        <>
+                          <div className="border-t-2 border-green-500 my-1"></div>
+                          <div className="bg-green-100 rounded p-1.5 mt-1">
+                            <div className="flex justify-between text-xs font-bold text-green-700">
+                              <span>💰 CHANGE TO RETURN:</span>
+                              <span>OMR {lastOrder.change.toFixed(3)}</span>
+                            </div>
+                          </div>
+                        </>
+                      )}
+                    </>
+                  )}
+                </div>
                 <div className="text-center mt-2 text-[10px] text-gray-500">
                   <p>Thank you for choosing Flames! 🔥</p>
                   <p>www.instagram.com/flames.om</p>

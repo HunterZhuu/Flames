@@ -80,13 +80,33 @@ export function generateReceiptHTML(order: Order, branchInfo: { name: string; ad
       </table>
     </div>
 
-    <!-- Payment -->
-    <div style="font-size: 11px; text-align: center; margin-bottom: 10px;">
-      <p style="margin: 2px 0;"><strong>Payment:</strong> <span style="text-transform: capitalize;">${order.paymentMethod}</span></p>
-      ${order.paymentMethod === 'cash' && order.cashTendered !== undefined ? `
-        <p style="margin: 2px 0;"><strong>Cash Tendered:</strong> OMR ${order.cashTendered.toFixed(3)}</p>
-        ${order.change !== undefined && order.change > 0 ? `<p style="margin: 2px 0; color: #16a34a; font-weight: bold;"><strong>Change:</strong> OMR ${order.change.toFixed(3)}</p>` : ''}
-      ` : ''}
+    <!-- Payment Breakdown -->
+    <div style="border: 2px solid #e53e3e; border-radius: 8px; padding: 12px; margin: 15px 0; background: #fef2f2;">
+      <div style="font-size: 11px;">
+        <p style="margin: 0 0 8px 0; text-align: center; font-weight: bold; color: #e53e3e; font-size: 12px;">PAYMENT DETAILS</p>
+        <div style="display: flex; justify-content: space-between; margin: 4px 0;">
+          <span>Payment Method:</span>
+          <span style="text-transform: capitalize; font-weight: bold;">${order.paymentMethod}</span>
+        </div>
+        ${order.paymentMethod === 'cash' && order.cashTendered !== undefined ? `
+          <div style="border-top: 1px dashed #e53e3e; margin: 8px 0;"></div>
+          <div style="display: flex; justify-content: space-between; margin: 4px 0;">
+            <span>Amount Paid:</span>
+            <span style="font-weight: bold;">OMR ${order.cashTendered.toFixed(3)}</span>
+          </div>
+          <div style="display: flex; justify-content: space-between; margin: 4px 0;">
+            <span>Total Bill:</span>
+            <span style="font-weight: bold;">OMR ${order.total.toFixed(3)}</span>
+          </div>
+          ${order.change !== undefined && order.change > 0 ? `
+            <div style="border-top: 2px solid #16a34a; margin: 8px 0;"></div>
+            <div style="display: flex; justify-content: space-between; margin: 8px 0 0 0; padding: 8px; background: #dcfce7; border-radius: 4px;">
+              <span style="font-weight: bold; color: #16a34a; font-size: 13px;">💰 CHANGE TO RETURN:</span>
+              <span style="font-weight: bold; color: #16a34a; font-size: 13px;">OMR ${order.change.toFixed(3)}</span>
+            </div>
+          ` : ''}
+        ` : ''}
+      </div>
     </div>
 
     <!-- Footer -->
@@ -136,16 +156,22 @@ export function generateThermalReceipt(order: Order, branchInfo: { name: string;
   receipt += `${line}\n`;
   receipt += `TOTAL${' '.repeat(21)}OMR ${order.total.toFixed(3)}\n`;
   receipt += `${doubleLine}\n`;
-  receipt += `Payment: ${order.paymentMethod.toUpperCase()}\n`;
+  receipt += `\n`;
+  receipt += `        PAYMENT DETAILS\n`;
+  receipt += `${line}\n`;
+  receipt += `Payment Method: ${order.paymentMethod.toUpperCase()}\n`;
   
   if (order.paymentMethod === 'cash' && order.cashTendered !== undefined) {
-    receipt += `Cash Tendered: OMR ${order.cashTendered.toFixed(3)}\n`;
+    receipt += `${line}\n`;
+    receipt += `Amount Paid:      OMR ${order.cashTendered.toFixed(3)}\n`;
+    receipt += `Total Bill:       OMR ${order.total.toFixed(3)}\n`;
     if (order.change !== undefined && order.change > 0) {
-      receipt += `CHANGE: OMR ${order.change.toFixed(3)}\n`;
+      receipt += `${line}\n`;
+      receipt += `*** CHANGE DUE ***  OMR ${order.change.toFixed(3)}\n`;
+      receipt += `${line}\n`;
     }
   }
   
-  receipt += `${line}\n`;
   receipt += `\n`;
   receipt += `    Thank you for choosing Flames! 🔥\n`;
   receipt += `        Instagram: @flames.om\n`;
