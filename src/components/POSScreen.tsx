@@ -466,7 +466,14 @@ export default function POSScreen() {
                 </div>
                 <div className="text-center mt-2 text-[10px] text-gray-500">
                   <p>Thank you for choosing Flames! 🔥</p>
-                  <p>www.instagram.com/flames.om</p>
+                  <a 
+                    href="https://www.instagram.com/flames.om" 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="text-red-500 hover:text-red-600 font-bold underline"
+                  >
+                    @flames.om
+                  </a>
                 </div>
               </div>
             </div>

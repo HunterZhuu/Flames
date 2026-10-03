@@ -112,7 +112,9 @@ export function generateReceiptHTML(order: Order, branchInfo: { name: string; ad
     <!-- Footer -->
     <div style="text-align: center; border-top: 2px dashed #e53e3e; padding-top: 15px; margin-top: 15px;">
       <p style="margin: 0 0 4px 0; font-size: 13px; font-weight: bold; color: #e53e3e;">Thank you for choosing Flames! 🔥</p>
-      <p style="margin: 0 0 2px 0; font-size: 10px; color: #666;">Instagram: @flames.om</p>
+      <p style="margin: 0 0 2px 0; font-size: 10px; color: #666;">
+        <a href="https://www.instagram.com/flames.om" style="color: #e53e3e; text-decoration: none; font-weight: bold;">@flames.om</a>
+      </p>
       <p style="margin: 0; font-size: 10px; color: #666;">Please come again!</p>
     </div>
 
@@ -174,7 +176,8 @@ export function generateThermalReceipt(order: Order, branchInfo: { name: string;
   
   receipt += `\n`;
   receipt += `    Thank you for choosing Flames! 🔥\n`;
-  receipt += `        Instagram: @flames.om\n`;
+  receipt += `        Follow us: @flames.om\n`;
+  receipt += `    instagram.com/flames.om\n`;
   receipt += `          Please come again!\n`;
   receipt += `\n`;
   receipt += `${doubleLine}\n`;
