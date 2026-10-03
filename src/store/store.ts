@@ -1,0 +1,284 @@
+import { create } from 'zustand';
+import { persist } from 'zustand/middleware';
+import { MenuItem } from '../data/menu';
+
+// Types
+export interface CartItem {
+  product: MenuItem;
+  quantity: number;
+  notes?: string;
+}
+
+export interface Order {
+  id: string;
+  items: CartItem[];
+  subtotal: number;
+  tax: number;
+  total: number;
+  paymentMethod: string;
+  cashier: string;
+  timestamp: number;
+  orderType: 'dine-in' | 'takeaway' | 'delivery';
+  tableNumber?: string;
+  status: 'completed' | 'refunded';
+}
+
+export interface StaffMember {
+  id: string;
+  name: string;
+  pin: string;
+  role: 'admin' | 'manager' | 'cashier' | 'kitchen';
+  active: boolean;
+  permissions: StaffPermissions;
+  createdAt: number;
+}
+
+export interface StaffPermissions {
+  canProcessOrders: boolean;
+  canRefund: boolean;
+  canViewReports: boolean;
+  canManageStaff: boolean;
+  canEditMenu: boolean;
+  canViewAllOrders: boolean;
+  canPrintReceipts: boolean;
+  canApplyDiscounts: boolean;
+}
+
+export const defaultPermissions: Record<StaffMember['role'], StaffPermissions> = {
+  admin: {
+    canProcessOrders: true,
+    canRefund: true,
+    canViewReports: true,
+    canManageStaff: true,
+    canEditMenu: true,
+    canViewAllOrders: true,
+    canPrintReceipts: true,
+    canApplyDiscounts: true,
+  },
+  manager: {
+    canProcessOrders: true,
+    canRefund: true,
+    canViewReports: true,
+    canManageStaff: false,
+    canEditMenu: true,
+    canViewAllOrders: true,
+    canPrintReceipts: true,
+    canApplyDiscounts: true,
+  },
+  cashier: {
+    canProcessOrders: true,
+    canRefund: false,
+    canViewReports: false,
+    canManageStaff: false,
+    canEditMenu: false,
+    canViewAllOrders: false,
+    canPrintReceipts: true,
+    canApplyDiscounts: false,
+  },
+  kitchen: {
+    canProcessOrders: false,
+    canRefund: false,
+    canViewReports: false,
+    canManageStaff: false,
+    canEditMenu: false,
+    canViewAllOrders: true,
+    canPrintReceipts: false,
+    canApplyDiscounts: false,
+  },
+};
+
+interface AppState {
+  // Auth
+  currentUser: StaffMember | null;
+  isLoggedIn: boolean;
+  
+  // Cart
+  cart: CartItem[];
+  orderType: 'dine-in' | 'takeaway' | 'delivery';
+  tableNumber: string;
+  
+  // Orders
+  orders: Order[];
+  
+  // Staff
+  staff: StaffMember[];
+  
+  // Menu overrides (for availability toggling)
+  menuOverrides: Record<string, boolean>;
+  
+  // Actions
+  login: (pin: string) => boolean;
+  logout: () => void;
+  addToCart: (item: MenuItem) => void;
+  removeFromCart: (itemId: string) => void;
+  updateCartQuantity: (itemId: string, qty: number) => void;
+  clearCart: () => void;
+  setOrderType: (type: 'dine-in' | 'takeaway' | 'delivery') => void;
+  setTableNumber: (num: string) => void;
+  completeOrder: (paymentMethod: string) => Order;
+  refundOrder: (orderId: string) => void;
+  addStaff: (member: Omit<StaffMember, 'id' | 'createdAt'>) => void;
+  updateStaff: (id: string, updates: Partial<StaffMember>) => void;
+  removeStaff: (id: string) => void;
+  toggleMenuItem: (itemId: string) => void;
+  getCartSubtotal: () => number;
+  getCartTax: () => number;
+  getCartTotal: () => number;
+}
+
+// Default admin account
+const defaultAdmin: StaffMember = {
+  id: 'admin-001',
+  name: 'Admin',
+  pin: '1234',
+  role: 'admin',
+  active: true,
+  permissions: defaultPermissions.admin,
+  createdAt: Date.now(),
+};
+
+export const useStore = create<AppState>()(
+  persist(
+    (set, get) => ({
+      currentUser: null,
+      isLoggedIn: false,
+      cart: [],
+      orderType: 'takeaway',
+      tableNumber: '',
+      orders: [],
+      staff: [defaultAdmin],
+      menuOverrides: {},
+
+      login: (pin: string) => {
+        const state = get();
+        const user = state.staff.find(s => s.pin === pin && s.active);
+        if (user) {
+          set({ currentUser: user, isLoggedIn: true });
+          return true;
+        }
+        return false;
+      },
+
+      logout: () => {
+        set({ currentUser: null, isLoggedIn: false, cart: [], orderType: 'takeaway', tableNumber: '' });
+      },
+
+      addToCart: (item: MenuItem) => {
+        const state = get();
+        const existing = state.cart.find(c => c.product.id === item.id);
+        if (existing) {
+          set({
+            cart: state.cart.map(c =>
+              c.product.id === item.id ? { ...c, quantity: c.quantity + 1 } : c
+            ),
+          });
+        } else {
+          set({ cart: [...state.cart, { product: item, quantity: 1 }] });
+        }
+      },
+
+      removeFromCart: (itemId: string) => {
+        set({ cart: get().cart.filter(c => c.product.id !== itemId) });
+      },
+
+      updateCartQuantity: (itemId: string, qty: number) => {
+        if (qty <= 0) {
+          set({ cart: get().cart.filter(c => c.product.id !== itemId) });
+        } else {
+          set({
+            cart: get().cart.map(c =>
+              c.product.id === itemId ? { ...c, quantity: qty } : c
+            ),
+          });
+        }
+      },
+
+      clearCart: () => set({ cart: [] }),
+
+      setOrderType: (type) => set({ orderType: type }),
+      setTableNumber: (num) => set({ tableNumber: num }),
+
+      completeOrder: (paymentMethod: string) => {
+        const state = get();
+        const subtotal = state.getCartSubtotal();
+        const tax = state.getCartTax();
+        const total = state.getCartTotal();
+        
+        const order: Order = {
+          id: `FLM-${Date.now().toString(36).toUpperCase()}`,
+          items: [...state.cart],
+          subtotal,
+          tax,
+          total,
+          paymentMethod,
+          cashier: state.currentUser?.name || 'Unknown',
+          timestamp: Date.now(),
+          orderType: state.orderType,
+          tableNumber: state.tableNumber,
+          status: 'completed',
+        };
+
+        set({
+          orders: [order, ...state.orders],
+          cart: [],
+          tableNumber: '',
+        });
+
+        return order;
+      },
+
+      refundOrder: (orderId: string) => {
+        set({
+          orders: get().orders.map(o =>
+            o.id === orderId ? { ...o, status: 'refunded' as const } : o
+          ),
+        });
+      },
+
+      addStaff: (member) => {
+        const newMember: StaffMember = {
+          ...member,
+          id: `staff-${Date.now()}`,
+          createdAt: Date.now(),
+        };
+        set({ staff: [...get().staff, newMember] });
+      },
+
+      updateStaff: (id: string, updates: Partial<StaffMember>) => {
+        set({
+          staff: get().staff.map(s => s.id === id ? { ...s, ...updates } : s),
+        });
+      },
+
+      removeStaff: (id: string) => {
+        set({ staff: get().staff.filter(s => s.id !== id) });
+      },
+
+      toggleMenuItem: (itemId: string) => {
+        const overrides = { ...get().menuOverrides };
+        overrides[itemId] = !overrides[itemId];
+        set({ menuOverrides: overrides });
+      },
+
+      getCartSubtotal: () => {
+        return get().cart.reduce((sum, item) => sum + item.product.price * item.quantity, 0);
+      },
+
+      getCartTax: () => {
+        return get().getCartSubtotal() * 0.05; // 5% VAT in Oman
+      },
+
+      getCartTotal: () => {
+        return get().getCartSubtotal() + get().getCartTax();
+      },
+    }),
+    {
+      name: 'flames-epos-storage',
+      partialize: (state) => ({
+        orders: state.orders,
+        staff: state.staff,
+        menuOverrides: state.menuOverrides,
+      }),
+    }
+  )
+);

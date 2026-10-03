@@ -1,0 +1,603 @@
+import { useState } from 'react';
+import { useStore, StaffMember, defaultPermissions, StaffPermissions } from '../store/store';
+import { menuItems } from '../data/menu';
+import toast from 'react-hot-toast';
+
+type AdminTab = 'dashboard' | 'staff' | 'orders' | 'menu';
+
+export default function AdminPanel() {
+  const [activeTab, setActiveTab] = useState<AdminTab>('dashboard');
+  const { currentUser } = useStore();
+
+  const tabs = [
+    { id: 'dashboard' as const, label: 'Dashboard', icon: 'fa-chart-line' },
+    { id: 'staff' as const, label: 'Staff', icon: 'fa-users', requires: 'canManageStaff' as keyof StaffPermissions },
+    { id: 'orders' as const, label: 'Orders', icon: 'fa-receipt', requires: 'canViewAllOrders' as keyof StaffPermissions },
+    { id: 'menu' as const, label: 'Menu', icon: 'fa-burger', requires: 'canEditMenu' as keyof StaffPermissions },
+  ].filter(tab => !tab.requires || (currentUser?.permissions[tab.requires]));
+
+  return (
+    <div className="h-full flex flex-col">
+      {/* Admin Tabs */}
+      <div className="bg-white border-b border-gray-200 px-4 flex gap-1 overflow-x-auto shrink-0">
+        {tabs.map(tab => (
+          <button
+            key={tab.id}
+            onClick={() => setActiveTab(tab.id)}
+            className={`flex items-center gap-1.5 px-4 py-3 text-xs font-bold border-b-2 transition-all whitespace-nowrap ${
+              activeTab === tab.id
+                ? 'border-orange-500 text-orange-600'
+                : 'border-transparent text-gray-500 hover:text-gray-700'
+            }`}
+          >
+            <i className={`fas ${tab.icon}`}></i>
+            {tab.label}
+          </button>
+        ))}
+      </div>
+
+      {/* Tab Content */}
+      <div className="flex-1 overflow-y-auto">
+        {activeTab === 'dashboard' && <Dashboard />}
+        {activeTab === 'staff' && <StaffManager />}
+        {activeTab === 'orders' && <OrderHistory />}
+        {activeTab === 'menu' && <MenuManager />}
+      </div>
+    </div>
+  );
+}
+
+// Dashboard
+function Dashboard() {
+  const { orders } = useStore();
+  
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  
+  const todayOrders = orders.filter(o => o.timestamp >= today.getTime() && o.status === 'completed');
+  const todayRevenue = todayOrders.reduce((sum, o) => sum + o.total, 0);
+  const totalOrders = orders.filter(o => o.status === 'completed');
+  const totalRevenue = totalOrders.reduce((sum, o) => sum + o.total, 0);
+  
+  // Top selling items
+  const itemCounts: Record<string, { name: string; count: number; revenue: number }> = {};
+  totalOrders.forEach(order => {
+    order.items.forEach(item => {
+      if (!itemCounts[item.product.id]) {
+        itemCounts[item.product.id] = { name: item.product.name, count: 0, revenue: 0 };
+      }
+      itemCounts[item.product.id].count += item.quantity;
+      itemCounts[item.product.id].revenue += item.product.price * item.quantity;
+    });
+  });
+  const topItems = Object.values(itemCounts).sort((a, b) => b.count - a.count).slice(0, 5);
+
+  // Payment breakdown
+  const paymentBreakdown = totalOrders.reduce((acc, o) => {
+    acc[o.paymentMethod] = (acc[o.paymentMethod] || 0) + 1;
+    return acc;
+  }, {} as Record<string, number>);
+
+  // Order type breakdown
+  const orderTypeBreakdown = totalOrders.reduce((acc, o) => {
+    acc[o.orderType] = (acc[o.orderType] || 0) + 1;
+    return acc;
+  }, {} as Record<string, number>);
+
+  return (
+    <div className="p-4 space-y-4">
+      {/* Stats Cards */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        <StatCard title="Today's Orders" value={todayOrders.length.toString()} icon="fa-shopping-bag" color="blue" />
+        <StatCard title="Today's Revenue" value={`${todayRevenue.toFixed(3)} OMR`} icon="fa-coins" color="green" />
+        <StatCard title="Total Orders" value={totalOrders.length.toString()} icon="fa-receipt" color="purple" />
+        <StatCard title="Total Revenue" value={`${totalRevenue.toFixed(3)} OMR`} icon="fa-chart-line" color="orange" />
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        {/* Top Selling Items */}
+        <div className="bg-white rounded-xl p-4 border border-gray-100">
+          <h3 className="font-bold text-sm text-gray-800 mb-3">
+            <i className="fas fa-fire text-orange-500 mr-1"></i> Top Selling Items
+          </h3>
+          {topItems.length === 0 ? (
+            <p className="text-xs text-gray-400 text-center py-4">No sales data yet</p>
+          ) : (
+            <div className="space-y-2">
+              {topItems.map((item, i) => (
+                <div key={i} className="flex items-center justify-between p-2 rounded-lg bg-gray-50">
+                  <div className="flex items-center gap-2">
+                    <span className="w-5 h-5 rounded-full bg-orange-100 text-orange-600 text-[10px] font-bold flex items-center justify-center">{i + 1}</span>
+                    <span className="text-xs font-medium text-gray-700">{item.name}</span>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-xs font-bold text-gray-800">{item.count} sold</p>
+                    <p className="text-[10px] text-gray-400">{item.revenue.toFixed(3)} OMR</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Payment & Order Types */}
+        <div className="space-y-4">
+          <div className="bg-white rounded-xl p-4 border border-gray-100">
+            <h3 className="font-bold text-sm text-gray-800 mb-3">
+              <i className="fas fa-credit-card text-blue-500 mr-1"></i> Payment Methods
+            </h3>
+            {Object.keys(paymentBreakdown).length === 0 ? (
+              <p className="text-xs text-gray-400 text-center py-4">No data yet</p>
+            ) : (
+              <div className="space-y-2">
+                {Object.entries(paymentBreakdown).map(([method, count]) => (
+                  <div key={method} className="flex items-center justify-between">
+                    <span className="text-xs text-gray-600 capitalize">{method}</span>
+                    <span className="text-xs font-bold text-gray-800">{count} orders</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          <div className="bg-white rounded-xl p-4 border border-gray-100">
+            <h3 className="font-bold text-sm text-gray-800 mb-3">
+              <i className="fas fa-utensils text-green-500 mr-1"></i> Order Types
+            </h3>
+            {Object.keys(orderTypeBreakdown).length === 0 ? (
+              <p className="text-xs text-gray-400 text-center py-4">No data yet</p>
+            ) : (
+              <div className="space-y-2">
+                {Object.entries(orderTypeBreakdown).map(([type, count]) => (
+                  <div key={type} className="flex items-center justify-between">
+                    <span className="text-xs text-gray-600 capitalize">{type === 'dine-in' ? 'Dine In' : type}</span>
+                    <span className="text-xs font-bold text-gray-800">{count} orders</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function StatCard({ title, value, icon, color }: { title: string; value: string; icon: string; color: string }) {
+  const colors: Record<string, string> = {
+    blue: 'bg-blue-50 text-blue-600',
+    green: 'bg-green-50 text-green-600',
+    purple: 'bg-purple-50 text-purple-600',
+    orange: 'bg-orange-50 text-orange-600',
+  };
+  return (
+    <div className="bg-white rounded-xl p-4 border border-gray-100">
+      <div className={`w-8 h-8 rounded-lg ${colors[color]} flex items-center justify-center mb-2`}>
+        <i className={`fas ${icon} text-sm`}></i>
+      </div>
+      <p className="text-lg font-black text-gray-900">{value}</p>
+      <p className="text-[10px] text-gray-400 font-medium">{title}</p>
+    </div>
+  );
+}
+
+// Staff Manager
+function StaffManager() {
+  const { staff, addStaff, updateStaff, removeStaff, currentUser } = useStore();
+  const [showForm, setShowForm] = useState(false);
+  const [editingStaff, setEditingStaff] = useState<StaffMember | null>(null);
+  const [formData, setFormData] = useState({
+    name: '',
+    pin: '',
+    role: 'cashier' as StaffMember['role'],
+    active: true,
+    permissions: { ...defaultPermissions.cashier },
+  });
+
+  const handleSave = () => {
+    if (!formData.name || !formData.pin) {
+      toast.error('Name and PIN are required');
+      return;
+    }
+    if (formData.pin.length < 4) {
+      toast.error('PIN must be at least 4 digits');
+      return;
+    }
+    // Check for duplicate PIN
+    const duplicate = staff.find(s => s.pin === formData.pin && s.id !== editingStaff?.id);
+    if (duplicate) {
+      toast.error('This PIN is already in use');
+      return;
+    }
+
+    if (editingStaff) {
+      updateStaff(editingStaff.id, formData);
+      toast.success('Staff updated!');
+    } else {
+      addStaff(formData);
+      toast.success('Staff added!');
+    }
+    resetForm();
+  };
+
+  const resetForm = () => {
+    setShowForm(false);
+    setEditingStaff(null);
+    setFormData({ name: '', pin: '', role: 'cashier', active: true, permissions: { ...defaultPermissions.cashier } });
+  };
+
+  const handleEdit = (member: StaffMember) => {
+    setEditingStaff(member);
+    setFormData({
+      name: member.name,
+      pin: member.pin,
+      role: member.role,
+      active: member.active,
+      permissions: { ...member.permissions },
+    });
+    setShowForm(true);
+  };
+
+  const handleRoleChange = (role: StaffMember['role']) => {
+    setFormData({ ...formData, role, permissions: { ...defaultPermissions[role] } });
+  };
+
+  const handlePermissionToggle = (key: keyof StaffPermissions) => {
+    setFormData({
+      ...formData,
+      permissions: { ...formData.permissions, [key]: !formData.permissions[key] },
+    });
+  };
+
+  return (
+    <div className="p-4 space-y-4">
+      <div className="flex items-center justify-between">
+        <h2 className="font-bold text-gray-800">Staff Management</h2>
+        <button
+          onClick={() => setShowForm(true)}
+          className="px-4 py-2 rounded-xl bg-orange-500 text-white text-xs font-bold shadow-md shadow-orange-200 hover:shadow-lg"
+        >
+          <i className="fas fa-plus mr-1"></i> Add Staff
+        </button>
+      </div>
+
+      {/* Staff List */}
+      <div className="grid gap-2">
+        {staff.map(member => (
+          <div key={member.id} className="bg-white rounded-xl p-4 border border-gray-100 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold text-white ${
+                member.role === 'admin' ? 'bg-red-500' :
+                member.role === 'manager' ? 'bg-purple-500' :
+                member.role === 'cashier' ? 'bg-blue-500' : 'bg-gray-500'
+              }`}>
+                {member.name[0]}
+              </div>
+              <div>
+                <p className="text-sm font-bold text-gray-800">{member.name}</p>
+                <div className="flex items-center gap-2">
+                  <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full capitalize ${
+                    member.role === 'admin' ? 'bg-red-100 text-red-600' :
+                    member.role === 'manager' ? 'bg-purple-100 text-purple-600' :
+                    member.role === 'cashier' ? 'bg-blue-100 text-blue-600' : 'bg-gray-100 text-gray-600'
+                  }`}>{member.role}</span>
+                  <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                    member.active ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-600'
+                  }`}>{member.active ? 'Active' : 'Inactive'}</span>
+                </div>
+              </div>
+            </div>
+            <div className="flex items-center gap-1">
+              <button
+                onClick={() => handleEdit(member)}
+                className="w-8 h-8 rounded-lg bg-gray-100 flex items-center justify-center text-gray-500 hover:bg-blue-50 hover:text-blue-500"
+              >
+                <i className="fas fa-pen text-xs"></i>
+              </button>
+              {member.id !== currentUser?.id && (
+                <button
+                  onClick={() => {
+                    if (confirm('Remove this staff member?')) {
+                      removeStaff(member.id);
+                      toast.success('Staff removed');
+                    }
+                  }}
+                  className="w-8 h-8 rounded-lg bg-gray-100 flex items-center justify-center text-gray-500 hover:bg-red-50 hover:text-red-500"
+                >
+                  <i className="fas fa-trash text-xs"></i>
+                </button>
+              )}
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Add/Edit Form Modal */}
+      {showForm && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl max-w-lg w-full max-h-[90vh] overflow-y-auto">
+            <div className="p-5 border-b border-gray-100 flex items-center justify-between sticky top-0 bg-white">
+              <h3 className="font-bold text-gray-900">{editingStaff ? 'Edit Staff' : 'Add New Staff'}</h3>
+              <button onClick={resetForm} className="w-7 h-7 rounded-full bg-gray-100 flex items-center justify-center text-gray-400">
+                <i className="fas fa-times text-xs"></i>
+              </button>
+            </div>
+
+            <div className="p-5 space-y-4">
+              {/* Basic Info */}
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs font-bold text-gray-700 mb-1 block">Name</label>
+                  <input
+                    type="text"
+                    value={formData.name}
+                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                    placeholder="Staff name"
+                    className="w-full px-3 py-2 rounded-lg border border-gray-200 focus:border-orange-400 focus:ring-2 focus:ring-orange-100 outline-none text-sm"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs font-bold text-gray-700 mb-1 block">PIN Code</label>
+                  <input
+                    type="text"
+                    value={formData.pin}
+                    onChange={(e) => setFormData({ ...formData, pin: e.target.value.replace(/\D/g, '').slice(0, 6) })}
+                    placeholder="4-6 digit PIN"
+                    className="w-full px-3 py-2 rounded-lg border border-gray-200 focus:border-orange-400 focus:ring-2 focus:ring-orange-100 outline-none text-sm"
+                  />
+                </div>
+              </div>
+
+              {/* Role */}
+              <div>
+                <label className="text-xs font-bold text-gray-700 mb-1.5 block">Role</label>
+                <div className="grid grid-cols-4 gap-2">
+                  {(['admin', 'manager', 'cashier', 'kitchen'] as const).map(role => (
+                    <button
+                      key={role}
+                      onClick={() => handleRoleChange(role)}
+                      className={`py-2 rounded-lg text-xs font-bold capitalize transition-all ${
+                        formData.role === role
+                          ? 'bg-orange-500 text-white shadow-md'
+                          : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                      }`}
+                    >
+                      {role}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Active Toggle */}
+              <div className="flex items-center justify-between p-3 rounded-lg bg-gray-50">
+                <span className="text-xs font-bold text-gray-700">Account Active</span>
+                <button
+                  onClick={() => setFormData({ ...formData, active: !formData.active })}
+                  className={`w-10 h-5 rounded-full transition-all ${formData.active ? 'bg-green-500' : 'bg-gray-300'}`}
+                >
+                  <div className={`w-4 h-4 rounded-full bg-white shadow transition-transform ${formData.active ? 'translate-x-5' : 'translate-x-0.5'}`}></div>
+                </button>
+              </div>
+
+              {/* Permissions */}
+              <div>
+                <label className="text-xs font-bold text-gray-700 mb-2 block">Permissions</label>
+                <div className="space-y-1.5">
+                  {(Object.entries(formData.permissions) as [keyof StaffPermissions, boolean][]).map(([key, value]) => (
+                    <div key={key} className="flex items-center justify-between p-2 rounded-lg bg-gray-50">
+                      <span className="text-xs text-gray-700 capitalize">
+                        {key.replace(/([A-Z])/g, ' $1').replace('can', '').trim()}
+                      </span>
+                      <button
+                        onClick={() => handlePermissionToggle(key)}
+                        className={`w-9 h-5 rounded-full transition-all ${value ? 'bg-orange-500' : 'bg-gray-300'}`}
+                      >
+                        <div className={`w-4 h-4 rounded-full bg-white shadow transition-transform ${value ? 'translate-x-4' : 'translate-x-0.5'}`}></div>
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <button
+                onClick={handleSave}
+                className="w-full py-3 rounded-xl bg-gradient-to-r from-orange-500 to-red-500 text-white font-bold text-sm shadow-lg shadow-orange-200"
+              >
+                <i className="fas fa-save mr-2"></i>
+                {editingStaff ? 'Update Staff' : 'Add Staff'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// Order History
+function OrderHistory() {
+  const { orders, refundOrder } = useStore();
+  const [filter, setFilter] = useState<'all' | 'today' | 'completed' | 'refunded'>('all');
+
+  const filteredOrders = orders.filter(order => {
+    if (filter === 'today') {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      return order.timestamp >= today.getTime();
+    }
+    if (filter === 'completed') return order.status === 'completed';
+    if (filter === 'refunded') return order.status === 'refunded';
+    return true;
+  });
+
+  return (
+    <div className="p-4 space-y-4">
+      <div className="flex items-center justify-between flex-wrap gap-2">
+        <h2 className="font-bold text-gray-800">Order History</h2>
+        <div className="flex gap-1">
+          {(['all', 'today', 'completed', 'refunded'] as const).map(f => (
+            <button
+              key={f}
+              onClick={() => setFilter(f)}
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold capitalize transition-all ${
+                filter === f ? 'bg-orange-500 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+              }`}
+            >
+              {f}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {filteredOrders.length === 0 ? (
+        <div className="text-center py-12 text-gray-400">
+          <i className="fas fa-receipt text-4xl mb-3"></i>
+          <p className="text-sm font-medium">No orders found</p>
+        </div>
+      ) : (
+        <div className="space-y-2">
+          {filteredOrders.map(order => (
+            <div key={order.id} className={`bg-white rounded-xl p-4 border ${
+              order.status === 'refunded' ? 'border-red-200 bg-red-50/50' : 'border-gray-100'
+            }`}>
+              <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-mono font-bold text-gray-800">{order.id}</span>
+                  <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full capitalize ${
+                    order.status === 'completed' ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-600'
+                  }`}>{order.status}</span>
+                </div>
+                <span className="text-xs font-bold text-orange-600">{order.total.toFixed(3)} OMR</span>
+              </div>
+              <div className="flex items-center justify-between text-[10px] text-gray-400">
+                <div className="flex items-center gap-3">
+                  <span><i className="fas fa-clock mr-1"></i>{new Date(order.timestamp).toLocaleString()}</span>
+                  <span><i className="fas fa-user mr-1"></i>{order.cashier}</span>
+                  <span className="capitalize"><i className="fas fa-tag mr-1"></i>{order.orderType}</span>
+                  <span><i className="fas fa-credit-card mr-1"></i>{order.paymentMethod}</span>
+                </div>
+                {order.status === 'completed' && (
+                  <button
+                    onClick={() => {
+                      if (confirm('Refund this order?')) {
+                        refundOrder(order.id);
+                        toast.success('Order refunded');
+                      }
+                    }}
+                    className="px-2 py-1 rounded-lg bg-red-100 text-red-600 text-[10px] font-bold hover:bg-red-200"
+                  >
+                    <i className="fas fa-undo mr-1"></i>Refund
+                  </button>
+                )}
+              </div>
+              <div className="mt-2 flex flex-wrap gap-1">
+                {order.items.map((item, i) => (
+                  <span key={i} className="text-[10px] px-2 py-0.5 rounded-full bg-gray-100 text-gray-600">
+                    {item.quantity}x {item.product.name}
+                  </span>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// Menu Manager
+function MenuManager() {
+  const { menuOverrides, toggleMenuItem } = useStore();
+  const [searchQuery, setSearchQuery] = useState('');
+  const [categoryFilter, setCategoryFilter] = useState('all');
+
+  const filteredItems = menuItems.filter(item => {
+    const matchesCategory = categoryFilter === 'all' || item.category === categoryFilter;
+    const matchesSearch = item.name.toLowerCase().includes(searchQuery.toLowerCase());
+    return matchesCategory && matchesSearch;
+  });
+
+  const groupedItems = filteredItems.reduce((acc, item) => {
+    if (!acc[item.category]) acc[item.category] = [];
+    acc[item.category].push(item);
+    return acc;
+  }, {} as Record<string, typeof menuItems>);
+
+  return (
+    <div className="p-4 space-y-4">
+      <div className="flex items-center justify-between flex-wrap gap-2">
+        <h2 className="font-bold text-gray-800">Menu Management</h2>
+        <p className="text-xs text-gray-400">Toggle item availability</p>
+      </div>
+
+      {/* Filters */}
+      <div className="flex gap-2 flex-wrap">
+        <input
+          type="text"
+          placeholder="Search items..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          className="px-3 py-2 rounded-lg border border-gray-200 focus:border-orange-400 focus:ring-2 focus:ring-orange-100 outline-none text-sm flex-1 min-w-[200px]"
+        />
+        <select
+          value={categoryFilter}
+          onChange={(e) => setCategoryFilter(e.target.value)}
+          className="px-3 py-2 rounded-lg border border-gray-200 text-sm outline-none"
+        >
+          <option value="all">All Categories</option>
+          <option value="burgers">Burgers</option>
+          <option value="sandwiches">Sandwiches</option>
+          <option value="sliders">Sliders</option>
+          <option value="appetizers">Appetizers</option>
+          <option value="pasta">Pasta</option>
+          <option value="mishkak">Mishkak</option>
+          <option value="salads">Salads</option>
+          <option value="fries">French Fries</option>
+          <option value="gathering">Gathering Box</option>
+          <option value="drinks">Drinks</option>
+          <option value="extras">Extras</option>
+        </select>
+      </div>
+
+      {/* Menu Items */}
+      <div className="space-y-4">
+        {Object.entries(groupedItems).map(([category, items]) => (
+          <div key={category}>
+            <h3 className="text-xs font-bold text-gray-500 uppercase mb-2 capitalize">{category}</h3>
+            <div className="grid gap-1.5">
+              {items.map(item => {
+                const isAvailable = menuOverrides[item.id] === undefined ? item.available : !menuOverrides[item.id];
+                return (
+                  <div key={item.id} className={`flex items-center justify-between p-3 rounded-xl border transition-all ${
+                    isAvailable ? 'bg-white border-gray-100' : 'bg-gray-50 border-gray-200 opacity-60'
+                  }`}>
+                    <div className="flex items-center gap-3">
+                      <div className={`w-8 h-8 rounded-lg bg-gradient-to-br ${item.color} flex items-center justify-center text-sm`}>
+                        {item.emoji}
+                      </div>
+                      <div>
+                        <p className="text-xs font-bold text-gray-800">{item.name}</p>
+                        <p className="text-[10px] text-gray-400">{item.price.toFixed(3)} OMR</p>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => toggleMenuItem(item.id)}
+                      className={`px-3 py-1.5 rounded-lg text-[10px] font-bold transition-all ${
+                        isAvailable
+                          ? 'bg-green-100 text-green-600 hover:bg-green-200'
+                          : 'bg-red-100 text-red-600 hover:bg-red-200'
+                      }`}
+                    >
+                      <i className={`fas ${isAvailable ? 'fa-eye' : 'fa-eye-slash'} mr-1`}></i>
+                      {isAvailable ? 'Available' : 'Hidden'}
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
