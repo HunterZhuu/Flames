@@ -7,6 +7,7 @@ export interface MenuItem {
   emoji: string;
   color: string;
   available: boolean;
+  image?: string; // base64 encoded image (optional)
 }
 
 export interface Category {

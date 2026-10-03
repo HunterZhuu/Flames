@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useStore, StaffMember, defaultPermissions, StaffPermissions } from '../store/store';
 import { menuItems } from '../data/menu';
 import { syncPendingEmails, printReceipt, queueEmailForOrder } from '../utils/syncService';
+import { compressImage } from '../utils/imageUtils';
 import toast from 'react-hot-toast';
 
 type AdminTab = 'dashboard' | 'staff' | 'orders' | 'menu' | 'settings';
@@ -536,9 +537,11 @@ function OrderHistory() {
 
 // Menu Manager
 function MenuManager() {
-  const { menuOverrides, toggleMenuItem } = useStore();
+  const { menuOverrides, toggleMenuItem, customImages, setCustomImage, removeCustomImage } = useStore();
   const [searchQuery, setSearchQuery] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('all');
+  const [editingImage, setEditingImage] = useState<string | null>(null);
+  const [uploading, setUploading] = useState(false);
 
   const filteredItems = menuItems.filter(item => {
     const matchesCategory = categoryFilter === 'all' || item.category === categoryFilter;
@@ -601,25 +604,46 @@ function MenuManager() {
                     isAvailable ? 'bg-white border-gray-100' : 'bg-gray-50 border-gray-200 opacity-60'
                   }`}>
                     <div className="flex items-center gap-3">
-                      <div className={`w-8 h-8 rounded-lg bg-gradient-to-br ${item.color} flex items-center justify-center text-sm`}>
-                        {item.emoji}
-                      </div>
+                      {customImages[item.id] ? (
+                        <img 
+                          src={customImages[item.id]} 
+                          alt={item.name}
+                          className="w-8 h-8 rounded-lg object-cover cursor-pointer hover:opacity-80"
+                          onClick={() => setEditingImage(item.id)}
+                        />
+                      ) : (
+                        <div 
+                          className={`w-8 h-8 rounded-lg bg-gradient-to-br ${item.color} flex items-center justify-center text-sm cursor-pointer hover:opacity-80`}
+                          onClick={() => setEditingImage(item.id)}
+                        >
+                          {item.emoji}
+                        </div>
+                      )}
                       <div>
                         <p className="text-xs font-bold text-gray-800">{item.name}</p>
                         <p className="text-[10px] text-gray-400">OMR {item.price.toFixed(3)}</p>
                       </div>
                     </div>
-                    <button
-                      onClick={() => toggleMenuItem(item.id)}
-                      className={`px-3 py-1.5 rounded-lg text-[10px] font-bold transition-all ${
-                        isAvailable
-                          ? 'bg-green-100 text-green-600 hover:bg-green-200'
-                          : 'bg-red-100 text-red-600 hover:bg-red-200'
-                      }`}
-                    >
-                      <i className={`fas ${isAvailable ? 'fa-eye' : 'fa-eye-slash'} mr-1`}></i>
-                      {isAvailable ? 'Available' : 'Hidden'}
-                    </button>
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => setEditingImage(item.id)}
+                        className="px-2 py-1.5 rounded-lg text-[10px] font-bold bg-blue-100 text-blue-600 hover:bg-blue-200 transition-all"
+                        title="Edit image"
+                      >
+                        <i className="fas fa-image"></i>
+                      </button>
+                      <button
+                        onClick={() => toggleMenuItem(item.id)}
+                        className={`px-3 py-1.5 rounded-lg text-[10px] font-bold transition-all ${
+                          isAvailable
+                            ? 'bg-green-100 text-green-600 hover:bg-green-200'
+                            : 'bg-red-100 text-red-600 hover:bg-red-200'
+                        }`}
+                      >
+                        <i className={`fas ${isAvailable ? 'fa-eye' : 'fa-eye-slash'} mr-1`}></i>
+                        {isAvailable ? 'Available' : 'Hidden'}
+                      </button>
+                    </div>
                   </div>
                 );
               })}
@@ -627,6 +651,105 @@ function MenuManager() {
           </div>
         ))}
       </div>
+
+      {/* Image Editing Modal */}
+      {editingImage && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl p-5 max-w-md w-full">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="font-bold text-sm text-gray-800">Edit Item Image</h3>
+              <button
+                onClick={() => setEditingImage(null)}
+                className="w-7 h-7 rounded-full bg-gray-100 flex items-center justify-center text-gray-400 hover:bg-gray-200"
+              >
+                <i className="fas fa-times text-xs"></i>
+              </button>
+            </div>
+
+            {(() => {
+              const item = menuItems.find(i => i.id === editingImage);
+              if (!item) return null;
+
+              return (
+                <>
+                  <div className="mb-4">
+                    <p className="text-xs font-bold text-gray-700 mb-2">{item.name}</p>
+                    <div className="flex items-center justify-center p-4 bg-gray-50 rounded-lg">
+                      {customImages[item.id] ? (
+                        <img 
+                          src={customImages[item.id]} 
+                          alt={item.name}
+                          className="w-24 h-24 rounded-lg object-cover"
+                        />
+                      ) : (
+                        <div className={`w-24 h-24 rounded-lg bg-gradient-to-br ${item.color} flex items-center justify-center text-4xl`}>
+                          {item.emoji}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="block">
+                      <div className="w-full py-3 rounded-lg bg-blue-500 text-white font-bold text-xs text-center cursor-pointer hover:bg-blue-600 transition-all">
+                        <i className="fas fa-upload mr-2"></i>
+                        {uploading ? 'Uploading...' : 'Upload New Image'}
+                      </div>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        disabled={uploading}
+                        onChange={async (e) => {
+                          const file = e.target.files?.[0];
+                          if (!file) return;
+
+                          if (file.size > 5 * 1024 * 1024) {
+                            toast.error('Image too large. Max 5MB');
+                            return;
+                          }
+
+                          setUploading(true);
+                          try {
+                            const compressed = await compressImage(file, 400, 0.7);
+                            setCustomImage(item.id, compressed);
+                            toast.success('Image updated!');
+                          } catch (err) {
+                            toast.error('Failed to upload image');
+                          } finally {
+                            setUploading(false);
+                            e.target.value = '';
+                          }
+                        }}
+                      />
+                    </label>
+
+                    {customImages[item.id] && (
+                      <button
+                        onClick={() => {
+                          removeCustomImage(item.id);
+                          toast.success('Image removed');
+                        }}
+                        className="w-full py-2.5 rounded-lg bg-red-100 text-red-600 font-bold text-xs hover:bg-red-200 transition-all"
+                      >
+                        <i className="fas fa-trash mr-2"></i>
+                        Remove Custom Image
+                      </button>
+                    )}
+
+                    <button
+                      onClick={() => setEditingImage(null)}
+                      className="w-full py-2.5 rounded-lg bg-gray-100 text-gray-700 font-bold text-xs hover:bg-gray-200 transition-all"
+                    >
+                      Close
+                    </button>
+                  </div>
+                </>
+              );
+            })()}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

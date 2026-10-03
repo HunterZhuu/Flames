@@ -142,6 +142,9 @@ interface AppState {
   // Payment Methods
   paymentMethods: PaymentMethod[];
   
+  // Custom Menu Images (stored separately to avoid bloating menu data)
+  customImages: Record<string, string>; // itemId -> base64 image
+  
   // Actions
   updateEmailConfig: (config: Partial<EmailConfig>) => void;
   addPendingEmail: (email: PendingEmail) => void;
@@ -152,6 +155,8 @@ interface AppState {
   updatePaymentMethod: (id: string, updates: Partial<PaymentMethod>) => void;
   removePaymentMethod: (id: string) => void;
   togglePaymentMethod: (id: string) => void;
+  setCustomImage: (itemId: string, imageBase64: string) => void;
+  removeCustomImage: (itemId: string) => void;
   
   // Actions
   login: (pin: string) => boolean;
@@ -211,6 +216,7 @@ export const useStore = create<AppState>()(
         { id: 'googlepay', name: 'Google Pay', icon: 'fa-google', enabled: true, color: 'yellow', sortOrder: 4 },
         { id: 'thawani', name: 'Thawani', icon: 'fa-wallet', enabled: true, color: 'purple', sortOrder: 5 },
       ],
+      customImages: {},
 
       login: (pin: string) => {
         const state = get();
@@ -371,6 +377,17 @@ export const useStore = create<AppState>()(
         });
       },
 
+      setCustomImage: (itemId: string, imageBase64: string) => {
+        set({
+          customImages: { ...get().customImages, [itemId]: imageBase64 },
+        });
+      },
+
+      removeCustomImage: (itemId: string) => {
+        const { [itemId]: _, ...rest } = get().customImages;
+        set({ customImages: rest });
+      },
+
       getCartSubtotal: () => {
         return get().cart.reduce((sum, item) => sum + item.product.price * item.quantity, 0);
       },
@@ -392,6 +409,7 @@ export const useStore = create<AppState>()(
         emailConfig: state.emailConfig,
         pendingEmails: state.pendingEmails,
         paymentMethods: state.paymentMethods,
+        customImages: state.customImages,
       }),
     }
   )
