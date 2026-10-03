@@ -145,6 +145,12 @@ interface AppState {
   // Custom Menu Images (stored separately to avoid bloating menu data)
   customImages: Record<string, string>; // itemId -> base64 image
   
+  // Custom Menu Items (added by admin)
+  customMenuItems: MenuItem[];
+  
+  // Removed Menu Items (hidden by admin)
+  removedMenuItems: string[]; // array of item IDs
+  
   // Actions
   updateEmailConfig: (config: Partial<EmailConfig>) => void;
   addPendingEmail: (email: PendingEmail) => void;
@@ -157,6 +163,9 @@ interface AppState {
   togglePaymentMethod: (id: string) => void;
   setCustomImage: (itemId: string, imageBase64: string) => void;
   removeCustomImage: (itemId: string) => void;
+  addMenuItem: (item: MenuItem) => void;
+  removeMenuItem: (itemId: string) => void;
+  restoreMenuItem: (itemId: string) => void;
   
   // Actions
   login: (pin: string) => boolean;
@@ -217,6 +226,8 @@ export const useStore = create<AppState>()(
         { id: 'thawani', name: 'Thawani', icon: 'fa-wallet', enabled: true, color: 'purple', sortOrder: 5 },
       ],
       customImages: {},
+      customMenuItems: [],
+      removedMenuItems: [],
 
       login: (pin: string) => {
         const state = get();
@@ -388,6 +399,18 @@ export const useStore = create<AppState>()(
         set({ customImages: rest });
       },
 
+      addMenuItem: (item: MenuItem) => {
+        set({ customMenuItems: [...get().customMenuItems, item] });
+      },
+
+      removeMenuItem: (itemId: string) => {
+        set({ removedMenuItems: [...get().removedMenuItems, itemId] });
+      },
+
+      restoreMenuItem: (itemId: string) => {
+        set({ removedMenuItems: get().removedMenuItems.filter(id => id !== itemId) });
+      },
+
       getCartSubtotal: () => {
         return get().cart.reduce((sum, item) => sum + item.product.price * item.quantity, 0);
       },
@@ -410,6 +433,8 @@ export const useStore = create<AppState>()(
         pendingEmails: state.pendingEmails,
         paymentMethods: state.paymentMethods,
         customImages: state.customImages,
+        customMenuItems: state.customMenuItems,
+        removedMenuItems: state.removedMenuItems,
       }),
     }
   )

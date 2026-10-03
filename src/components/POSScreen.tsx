@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useStore } from '../store/store';
-import { menuItems, categories } from '../data/menu';
+import { getEffectiveMenu, categories } from '../data/menu';
 import { printReceipt, queueEmailForOrder } from '../utils/syncService';
 import toast from 'react-hot-toast';
 
@@ -10,6 +10,7 @@ export default function POSScreen() {
     orderType, setOrderType, tableNumber, setTableNumber,
     completeOrder, getCartSubtotal, getCartTax, getCartTotal,
     currentUser, menuOverrides, paymentMethods, customImages,
+    customMenuItems, removedMenuItems,
   } = useStore();
 
   const [activeCategory, setActiveCategory] = useState('all');
@@ -21,7 +22,8 @@ export default function POSScreen() {
   const [lastOrder, setLastOrder] = useState<any>(null);
   const [showReceipt, setShowReceipt] = useState(false);
 
-  const filteredItems = menuItems.filter(item => {
+  const effectiveMenu = getEffectiveMenu(customMenuItems, removedMenuItems);
+  const filteredItems = effectiveMenu.filter(item => {
     const isAvailable = menuOverrides[item.id] === undefined ? item.available : !menuOverrides[item.id];
     const matchesCategory = activeCategory === 'all' || item.category === activeCategory;
     const matchesSearch = item.name.toLowerCase().includes(searchQuery.toLowerCase());

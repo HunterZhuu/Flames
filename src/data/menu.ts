@@ -31,6 +31,15 @@ export const categories: Category[] = [
   { id: 'extras', name: 'Extras', emoji: '✨' },
 ];
 
+// Helper function to get the effective menu (base + custom - removed)
+export const getEffectiveMenu = (
+  customItems: MenuItem[],
+  removedIds: string[]
+): MenuItem[] => {
+  const baseItems = menuItems.filter(item => !removedIds.includes(item.id));
+  return [...baseItems, ...customItems];
+};
+
 // ============================================================
 // FLAMES BURGERS & MORE - COMPLETE MENU
 // Prices sourced from Talabat Oman (live delivery platform)
