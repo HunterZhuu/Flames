@@ -2,7 +2,12 @@ import { useState } from 'react';
 import { useStore } from '../store/store';
 import toast from 'react-hot-toast';
 
-export default function LoginScreen() {
+interface LoginScreenProps {
+  onBack?: () => void;
+  isSwitchUser?: boolean;
+}
+
+export default function LoginScreen({ onBack, isSwitchUser = false }: LoginScreenProps) {
   const [pin, setPin] = useState('');
   const [showPin, setShowPin] = useState(false);
   const login = useStore(s => s.login);
@@ -14,7 +19,10 @@ export default function LoginScreen() {
     }
     const success = login(pin);
     if (success) {
-      toast.success('Welcome back! 🔥');
+      toast.success(isSwitchUser ? 'User switched! 🔥' : 'Welcome back! 🔥');
+      if (isSwitchUser && onBack) {
+        onBack();
+      }
     } else {
       toast.error('Invalid PIN. Try again.');
       setPin('');
@@ -40,6 +48,16 @@ export default function LoginScreen() {
         }}></div>
       </div>
 
+      {/* Back Button (only when switching users) */}
+      {isSwitchUser && onBack && (
+        <button
+          onClick={onBack}
+          className="absolute top-6 left-6 w-10 h-10 rounded-full bg-white/10 backdrop-blur-sm flex items-center justify-center text-white hover:bg-white/20 transition-all z-10"
+        >
+          <i className="fas fa-arrow-left"></i>
+        </button>
+      )}
+
       <div className="relative w-full max-w-sm">
         {/* Logo */}
         <div className="text-center mb-8">
@@ -48,7 +66,9 @@ export default function LoginScreen() {
           </div>
           <h1 className="text-3xl font-black text-white tracking-tight">FLAMES</h1>
           <p className="text-orange-300 font-medium text-sm">Burgers & More</p>
-          <p className="text-gray-500 text-xs mt-2">Enter your PIN to continue</p>
+          <p className="text-gray-500 text-xs mt-2">
+            {isSwitchUser ? 'Switch to another user' : 'Enter your PIN to continue'}
+          </p>
         </div>
 
         {/* PIN Display */}
