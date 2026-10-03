@@ -89,9 +89,9 @@ function Dashboard() {
       {/* Stats Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         <StatCard title="Today's Orders" value={todayOrders.length.toString()} icon="fa-shopping-bag" color="blue" />
-        <StatCard title="Today's Revenue" value={`${todayRevenue.toFixed(3)} OMR`} icon="fa-coins" color="green" />
+        <StatCard title="Today's Revenue" value={`OMR ${todayRevenue.toFixed(3)}`} icon="fa-coins" color="green" />
         <StatCard title="Total Orders" value={totalOrders.length.toString()} icon="fa-receipt" color="purple" />
-        <StatCard title="Total Revenue" value={`${totalRevenue.toFixed(3)} OMR`} icon="fa-chart-line" color="orange" />
+        <StatCard title="Total Revenue" value={`OMR ${totalRevenue.toFixed(3)}`} icon="fa-chart-line" color="orange" />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
@@ -112,7 +112,7 @@ function Dashboard() {
                   </div>
                   <div className="text-right">
                     <p className="text-xs font-bold text-gray-800">{item.count} sold</p>
-                    <p className="text-[10px] text-gray-400">{item.revenue.toFixed(3)} OMR</p>
+                    <p className="text-[10px] text-gray-400">OMR {item.revenue.toFixed(3)}</p>
                   </div>
                 </div>
               ))}
@@ -467,7 +467,7 @@ function OrderHistory() {
                     order.status === 'completed' ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-600'
                   }`}>{order.status}</span>
                 </div>
-                <span className="text-xs font-bold text-orange-600">{order.total.toFixed(3)} OMR</span>
+                <span className="text-xs font-bold text-orange-600">OMR {order.total.toFixed(3)}</span>
               </div>
               <div className="flex items-center justify-between text-[10px] text-gray-400">
                 <div className="flex items-center gap-3">
@@ -577,7 +577,7 @@ function MenuManager() {
                       </div>
                       <div>
                         <p className="text-xs font-bold text-gray-800">{item.name}</p>
-                        <p className="text-[10px] text-gray-400">{item.price.toFixed(3)} OMR</p>
+                        <p className="text-[10px] text-gray-400">OMR {item.price.toFixed(3)}</p>
                       </div>
                     </div>
                     <button

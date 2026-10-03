@@ -186,7 +186,7 @@ export default function POSScreen() {
                     {item.name}
                   </span>
                   <span className="text-xs font-black text-orange-600">
-                    {item.price.toFixed(3)} <span className="text-[9px] text-gray-400">OMR</span>
+                    OMR {item.price.toFixed(3)}
                   </span>
                 </button>
               );
@@ -241,7 +241,7 @@ export default function POSScreen() {
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-xs font-bold text-gray-800 truncate">{item.product.name}</p>
-                    <p className="text-[10px] text-gray-400">{item.product.price.toFixed(3)} OMR</p>
+                    <p className="text-[10px] text-gray-400">OMR {item.product.price.toFixed(3)}</p>
                   </div>
                   <div className="flex items-center gap-0.5">
                     <button
@@ -258,7 +258,7 @@ export default function POSScreen() {
                       <i className="fas fa-plus text-[8px]"></i>
                     </button>
                   </div>
-                  <span className="text-xs font-bold text-gray-800 w-14 text-right">
+                  <span className="text-xs font-bold text-gray-800 w-16 text-right">
                     {(item.product.price * item.quantity).toFixed(3)}
                   </span>
                 </div>
@@ -272,15 +272,15 @@ export default function POSScreen() {
           <div className="space-y-1">
             <div className="flex justify-between text-xs text-gray-500">
               <span>Subtotal</span>
-              <span>{subtotal.toFixed(3)} OMR</span>
+              <span>OMR {subtotal.toFixed(3)}</span>
             </div>
             <div className="flex justify-between text-xs text-gray-500">
               <span>VAT (5%)</span>
-              <span>{tax.toFixed(3)} OMR</span>
+              <span>OMR {tax.toFixed(3)}</span>
             </div>
             <div className="flex justify-between text-base font-black text-gray-900 pt-1.5 border-t border-dashed border-gray-200">
               <span>Total</span>
-              <span className="text-orange-600">{total.toFixed(3)} OMR</span>
+              <span className="text-orange-600">OMR {total.toFixed(3)}</span>
             </div>
           </div>
 
@@ -290,7 +290,7 @@ export default function POSScreen() {
             className="w-full py-3 rounded-xl bg-gradient-to-r from-red-600 to-orange-500 text-white font-bold text-sm shadow-lg shadow-orange-200 hover:shadow-xl disabled:opacity-40 disabled:cursor-not-allowed transition-all active:scale-[0.98]"
           >
             <i className="fas fa-credit-card mr-2"></i>
-            Charge {total.toFixed(3)} OMR
+            Charge OMR {total.toFixed(3)}
           </button>
         </div>
       </div>
@@ -302,7 +302,7 @@ export default function POSScreen() {
             <div className="p-5 border-b border-gray-100 flex items-center justify-between">
               <div>
                 <h2 className="text-lg font-black text-gray-900">Payment</h2>
-                <p className="text-xs text-gray-400">Total: <span className="font-bold text-orange-600">{total.toFixed(3)} OMR</span></p>
+                <p className="text-xs text-gray-400">Total: <span className="font-bold text-orange-600">OMR {total.toFixed(3)}</span></p>
               </div>
               <button onClick={() => setShowPayment(false)} className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-gray-400 hover:bg-gray-200">
                 <i className="fas fa-times"></i>
@@ -362,7 +362,7 @@ export default function POSScreen() {
                     <div className="mt-2 p-2 rounded-lg bg-green-50 border border-green-100">
                       <div className="flex justify-between text-xs">
                         <span className="text-green-600 font-bold">Change Due</span>
-                        <span className="font-black text-green-700">{change.toFixed(3)} OMR</span>
+                        <span className="font-black text-green-700">OMR {change.toFixed(3)}</span>
                       </div>
                     </div>
                   )}
@@ -423,13 +423,13 @@ export default function POSScreen() {
                 {lastOrder.items.map((item: any, i: number) => (
                   <div key={i} className="flex justify-between text-[10px]">
                     <span>{item.quantity}x {item.product.name}</span>
-                    <span>{(item.product.price * item.quantity).toFixed(3)}</span>
+                    <span>OMR {(item.product.price * item.quantity).toFixed(3)}</span>
                   </div>
                 ))}
                 <div className="border-t border-dashed border-gray-300 my-2"></div>
-                <div className="flex justify-between text-[10px]"><span>Subtotal</span><span>{lastOrder.subtotal.toFixed(3)}</span></div>
-                <div className="flex justify-between text-[10px]"><span>VAT (5%)</span><span>{lastOrder.tax.toFixed(3)}</span></div>
-                <div className="flex justify-between font-bold text-xs mt-1"><span>TOTAL</span><span>{lastOrder.total.toFixed(3)} OMR</span></div>
+                <div className="flex justify-between text-[10px]"><span>Subtotal</span><span>OMR {lastOrder.subtotal.toFixed(3)}</span></div>
+                <div className="flex justify-between text-[10px]"><span>VAT (5%)</span><span>OMR {lastOrder.tax.toFixed(3)}</span></div>
+                <div className="flex justify-between font-bold text-xs mt-1"><span>TOTAL</span><span>OMR {lastOrder.total.toFixed(3)}</span></div>
                 <div className="border-t border-dashed border-gray-300 my-2"></div>
                 <div className="flex justify-between text-[10px]"><span>Payment</span><span className="capitalize">{lastOrder.paymentMethod}</span></div>
                 <div className="text-center mt-2 text-[10px] text-gray-500">
