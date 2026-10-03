@@ -76,17 +76,14 @@ function Dashboard() {
   });
   const topItems = Object.values(itemCounts).sort((a, b) => b.count - a.count).slice(0, 5);
 
-  // Payment breakdown
-  const paymentBreakdown = totalOrders.reduce((acc, o) => {
-    acc[o.paymentMethod] = (acc[o.paymentMethod] || 0) + 1;
-    return acc;
-  }, {} as Record<string, number>);
-
   // Order type breakdown
   const orderTypeBreakdown = totalOrders.reduce((acc, o) => {
     acc[o.orderType] = (acc[o.orderType] || 0) + 1;
     return acc;
   }, {} as Record<string, number>);
+
+  // Total items sold
+  const totalItemsSold = totalOrders.reduce((sum, o) => sum + o.items.reduce((s, i) => s + i.quantity, 0), 0);
 
   return (
     <div className="p-4 space-y-4">
@@ -124,26 +121,8 @@ function Dashboard() {
           )}
         </div>
 
-        {/* Payment & Order Types */}
+        {/* Order Types & Stats */}
         <div className="space-y-4">
-          <div className="bg-white rounded-xl p-4 border border-gray-100">
-            <h3 className="font-bold text-sm text-gray-800 mb-3">
-              <i className="fas fa-credit-card text-blue-500 mr-1"></i> Payment Methods
-            </h3>
-            {Object.keys(paymentBreakdown).length === 0 ? (
-              <p className="text-xs text-gray-400 text-center py-4">No data yet</p>
-            ) : (
-              <div className="space-y-2">
-                {Object.entries(paymentBreakdown).map(([method, count]) => (
-                  <div key={method} className="flex items-center justify-between">
-                    <span className="text-xs text-gray-600 capitalize">{method}</span>
-                    <span className="text-xs font-bold text-gray-800">{count} orders</span>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-
           <div className="bg-white rounded-xl p-4 border border-gray-100">
             <h3 className="font-bold text-sm text-gray-800 mb-3">
               <i className="fas fa-utensils text-green-500 mr-1"></i> Order Types
@@ -160,6 +139,16 @@ function Dashboard() {
                 ))}
               </div>
             )}
+          </div>
+
+          <div className="bg-white rounded-xl p-4 border border-gray-100">
+            <h3 className="font-bold text-sm text-gray-800 mb-3">
+              <i className="fas fa-box text-purple-500 mr-1"></i> Total Items Sold
+            </h3>
+            <div className="text-center py-4">
+              <p className="text-3xl font-black text-purple-600">{totalItemsSold}</p>
+              <p className="text-xs text-gray-400 mt-1">items across all orders</p>
+            </div>
           </div>
         </div>
       </div>
@@ -482,6 +471,7 @@ function StaffManager() {
 function OrderHistory() {
   const { orders, refundOrder } = useStore();
   const [filter, setFilter] = useState<'all' | 'today' | 'completed' | 'refunded'>('all');
+  const [showPrintOptions, setShowPrintOptions] = useState<string | null>(null);
 
   const filteredOrders = orders.filter(order => {
     if (filter === 'today') {
@@ -538,32 +528,14 @@ function OrderHistory() {
                   <span><i className="fas fa-clock mr-1"></i>{new Date(order.timestamp).toLocaleString()}</span>
                   <span><i className="fas fa-user mr-1"></i>{order.cashier}</span>
                   <span className="capitalize"><i className="fas fa-tag mr-1"></i>{order.orderType}</span>
-                  <span><i className="fas fa-credit-card mr-1"></i>{order.paymentMethod}</span>
                 </div>
                 <div className="flex items-center gap-1">
                   <button
-                    onClick={() => printReceipt(order, 'customer')}
+                    onClick={() => setShowPrintOptions(order.id)}
                     className="px-2 py-1 rounded-lg bg-blue-100 text-blue-600 text-[10px] font-bold hover:bg-blue-200"
-                    title="Print receipt"
+                    title="Print options"
                   >
-                    <i className="fas fa-print"></i>
-                  </button>
-                  <button
-                    onClick={() => printReceipt(order, 'kitchen')}
-                    className="px-2 py-1 rounded-lg bg-amber-100 text-amber-600 text-[10px] font-bold hover:bg-amber-200"
-                    title="Print kitchen copy"
-                  >
-                    <i className="fas fa-utensils"></i>
-                  </button>
-                  <button
-                    onClick={() => {
-                      queueEmailForOrder(order);
-                      toast.success('Receipt queued for email');
-                    }}
-                    className="px-2 py-1 rounded-lg bg-purple-100 text-purple-600 text-[10px] font-bold hover:bg-purple-200"
-                    title="Email receipt"
-                  >
-                    <i className="fas fa-envelope"></i>
+                    <i className="fas fa-print mr-1"></i>Print
                   </button>
                   {order.status === 'completed' && (
                     <button
@@ -591,6 +563,117 @@ function OrderHistory() {
           ))}
         </div>
       )}
+
+      {/* Print Options Modal */}
+      {showPrintOptions && (() => {
+        const order = orders.find(o => o.id === showPrintOptions);
+        if (!order) return null;
+        
+        return (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-xl p-5 max-w-md w-full">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="font-bold text-sm text-gray-800">Print Options</h3>
+                <button
+                  onClick={() => setShowPrintOptions(null)}
+                  className="w-7 h-7 rounded-full bg-gray-100 flex items-center justify-center text-gray-400 hover:bg-gray-200"
+                >
+                  <i className="fas fa-times text-xs"></i>
+                </button>
+              </div>
+
+              <div className="mb-4 p-3 bg-gray-50 rounded-lg">
+                <p className="text-xs text-gray-500">Order ID</p>
+                <p className="text-sm font-bold text-gray-800">{order.id}</p>
+                <p className="text-xs text-gray-500 mt-2">Total Amount</p>
+                <p className="text-sm font-bold text-orange-600">OMR {order.total.toFixed(3)}</p>
+              </div>
+
+              <div className="space-y-2">
+                <button
+                  onClick={() => {
+                    printReceipt(order, 'customer');
+                    setShowPrintOptions(null);
+                    toast.success('Customer receipt sent to printer');
+                  }}
+                  className="w-full flex items-center gap-3 p-3 rounded-lg border-2 border-gray-200 hover:border-blue-500 hover:bg-blue-50 transition-all text-left"
+                >
+                  <div className="w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center">
+                    <i className="fas fa-receipt text-blue-600"></i>
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-sm font-bold text-gray-800">Customer Receipt</p>
+                    <p className="text-xs text-gray-500">Full receipt with payment details</p>
+                  </div>
+                  <i className="fas fa-chevron-right text-gray-400"></i>
+                </button>
+
+                <button
+                  onClick={() => {
+                    printReceipt(order, 'kitchen');
+                    setShowPrintOptions(null);
+                    toast.success('Kitchen ticket sent to printer');
+                  }}
+                  className="w-full flex items-center gap-3 p-3 rounded-lg border-2 border-gray-200 hover:border-amber-500 hover:bg-amber-50 transition-all text-left"
+                >
+                  <div className="w-10 h-10 rounded-lg bg-amber-100 flex items-center justify-center">
+                    <i className="fas fa-utensils text-amber-600"></i>
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-sm font-bold text-gray-800">Kitchen Copy</p>
+                    <p className="text-xs text-gray-500">Order details for kitchen staff</p>
+                  </div>
+                  <i className="fas fa-chevron-right text-gray-400"></i>
+                </button>
+
+                <button
+                  onClick={() => {
+                    queueEmailForOrder(order);
+                    setShowPrintOptions(null);
+                    toast.success('Receipt queued for email');
+                  }}
+                  className="w-full flex items-center gap-3 p-3 rounded-lg border-2 border-gray-200 hover:border-purple-500 hover:bg-purple-50 transition-all text-left"
+                >
+                  <div className="w-10 h-10 rounded-lg bg-purple-100 flex items-center justify-center">
+                    <i className="fas fa-envelope text-purple-600"></i>
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-sm font-bold text-gray-800">Email Receipt</p>
+                    <p className="text-xs text-gray-500">Send receipt via email</p>
+                  </div>
+                  <i className="fas fa-chevron-right text-gray-400"></i>
+                </button>
+
+                <button
+                  onClick={() => {
+                    printReceipt(order, 'customer');
+                    setTimeout(() => printReceipt(order, 'kitchen'), 500);
+                    setShowPrintOptions(null);
+                    toast.success('Both receipts sent to printer');
+                  }}
+                  className="w-full flex items-center gap-3 p-3 rounded-lg border-2 border-gray-200 hover:border-green-500 hover:bg-green-50 transition-all text-left"
+                >
+                  <div className="w-10 h-10 rounded-lg bg-green-100 flex items-center justify-center">
+                    <i className="fas fa-print text-green-600"></i>
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-sm font-bold text-gray-800">Print Both</p>
+                    <p className="text-xs text-gray-500">Customer receipt + Kitchen copy</p>
+                  </div>
+                  <i className="fas fa-chevron-right text-gray-400"></i>
+                </button>
+              </div>
+
+              <button
+                onClick={() => setShowPrintOptions(null)}
+                className="w-full mt-4 py-2.5 rounded-lg bg-gray-100 text-gray-700 font-bold text-xs hover:bg-gray-200 transition-all"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        );
+      })()}
     </div>
   );
 }
