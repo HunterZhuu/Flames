@@ -87,6 +87,26 @@ export const defaultPermissions: Record<StaffMember['role'], StaffPermissions> =
   },
 };
 
+export interface EmailConfig {
+  enabled: boolean;
+  recipientEmail: string;
+  branchName: string;
+  branchAddress: string;
+  branchPhone: string;
+  autoSyncOnConnect: boolean;
+}
+
+export interface PendingEmail {
+  id: string;
+  orderId: string;
+  recipientEmail: string;
+  orderData: Order;
+  createdAt: number;
+  attempts: number;
+  lastAttempt?: number;
+  status: 'pending' | 'sending' | 'sent' | 'failed';
+}
+
 interface AppState {
   // Auth
   currentUser: StaffMember | null;
@@ -105,6 +125,17 @@ interface AppState {
   
   // Menu overrides (for availability toggling)
   menuOverrides: Record<string, boolean>;
+  
+  // Email & Sync
+  emailConfig: EmailConfig;
+  pendingEmails: PendingEmail[];
+  
+  // Actions
+  updateEmailConfig: (config: Partial<EmailConfig>) => void;
+  addPendingEmail: (email: PendingEmail) => void;
+  updatePendingEmail: (id: string, updates: Partial<PendingEmail>) => void;
+  removePendingEmail: (id: string) => void;
+  clearSentEmails: () => void;
   
   // Actions
   login: (pin: string) => boolean;
@@ -148,6 +179,15 @@ export const useStore = create<AppState>()(
       orders: [],
       staff: [defaultAdmin],
       menuOverrides: {},
+      emailConfig: {
+        enabled: false,
+        recipientEmail: '',
+        branchName: 'FLAMES BURGERS & MORE',
+        branchAddress: 'Barka, Oman',
+        branchPhone: '92809445',
+        autoSyncOnConnect: true,
+      },
+      pendingEmails: [],
 
       login: (pin: string) => {
         const state = get();
@@ -260,6 +300,30 @@ export const useStore = create<AppState>()(
         set({ menuOverrides: overrides });
       },
 
+      updateEmailConfig: (config: Partial<EmailConfig>) => {
+        set({ emailConfig: { ...get().emailConfig, ...config } });
+      },
+
+      addPendingEmail: (email: PendingEmail) => {
+        set({ pendingEmails: [...get().pendingEmails, email] });
+      },
+
+      updatePendingEmail: (id: string, updates: Partial<PendingEmail>) => {
+        set({
+          pendingEmails: get().pendingEmails.map(e =>
+            e.id === id ? { ...e, ...updates } : e
+          ),
+        });
+      },
+
+      removePendingEmail: (id: string) => {
+        set({ pendingEmails: get().pendingEmails.filter(e => e.id !== id) });
+      },
+
+      clearSentEmails: () => {
+        set({ pendingEmails: get().pendingEmails.filter(e => e.status !== 'sent') });
+      },
+
       getCartSubtotal: () => {
         return get().cart.reduce((sum, item) => sum + item.product.price * item.quantity, 0);
       },
@@ -278,6 +342,8 @@ export const useStore = create<AppState>()(
         orders: state.orders,
         staff: state.staff,
         menuOverrides: state.menuOverrides,
+        emailConfig: state.emailConfig,
+        pendingEmails: state.pendingEmails,
       }),
     }
   )

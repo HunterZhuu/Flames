@@ -1,6 +1,7 @@
-import { useState, useRef } from 'react';
+import { useState } from 'react';
 import { useStore } from '../store/store';
-import { menuItems, categories, MenuItem } from '../data/menu';
+import { menuItems, categories } from '../data/menu';
+import { printReceipt, queueEmailForOrder } from '../utils/syncService';
 import toast from 'react-hot-toast';
 
 export default function POSScreen() {
@@ -18,7 +19,6 @@ export default function POSScreen() {
   const [cashAmount, setCashAmount] = useState('');
   const [lastOrder, setLastOrder] = useState<any>(null);
   const [showReceipt, setShowReceipt] = useState(false);
-  const receiptRef = useRef<HTMLDivElement>(null);
 
   const filteredItems = menuItems.filter(item => {
     const isAvailable = menuOverrides[item.id] === undefined ? item.available : !menuOverrides[item.id];
@@ -60,34 +60,7 @@ export default function POSScreen() {
     toast.success('Order completed! 🎉');
   };
 
-  const handlePrint = () => {
-    if (receiptRef.current) {
-      const printContent = receiptRef.current.innerHTML;
-      const printWindow = window.open('', '_blank');
-      if (printWindow) {
-        printWindow.document.write(`
-          <html>
-            <head>
-              <title>Receipt - ${lastOrder?.id}</title>
-              <style>
-                body { font-family: 'Courier New', monospace; max-width: 300px; margin: 0 auto; padding: 10px; font-size: 12px; }
-                .center { text-align: center; }
-                .bold { font-weight: bold; }
-                .line { border-top: 1px dashed #000; margin: 8px 0; }
-                .row { display: flex; justify-content: space-between; }
-                .item { margin: 4px 0; }
-                h2 { margin: 4px 0; }
-                @media print { body { margin: 0; } }
-              </style>
-            </head>
-            <body>${printContent}</body>
-          </html>
-        `);
-        printWindow.document.close();
-        printWindow.print();
-      }
-    }
-  };
+  // Use the printReceipt function from syncService
 
   const cashTendered = parseFloat(cashAmount) || 0;
   const change = cashTendered - total;
@@ -403,7 +376,7 @@ export default function POSScreen() {
 
             {/* Receipt Preview */}
             <div className="p-4 max-h-60 overflow-y-auto">
-              <div ref={receiptRef} className="font-mono text-xs">
+              <div className="font-mono text-xs">
                 <div className="center text-center">
                   <p className="font-bold text-sm">🔥 FLAMES BURGERS & MORE</p>
                   <p className="text-[10px] text-gray-500">Barka, Oman</p>
@@ -439,18 +412,43 @@ export default function POSScreen() {
               </div>
             </div>
 
-            <div className="p-4 border-t border-gray-100 flex gap-2">
+            <div className="p-4 border-t border-gray-100 space-y-2">
+              {/* Primary Actions */}
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  onClick={() => printReceipt(lastOrder, 'customer')}
+                  className="py-2.5 rounded-xl bg-blue-600 text-white font-bold text-xs shadow-md hover:shadow-lg transition-all"
+                >
+                  <i className="fas fa-print mr-1"></i> Customer Receipt
+                </button>
+                <button
+                  onClick={() => printReceipt(lastOrder, 'kitchen')}
+                  className="py-2.5 rounded-xl bg-amber-600 text-white font-bold text-xs shadow-md hover:shadow-lg transition-all"
+                >
+                  <i className="fas fa-utensils mr-1"></i> Kitchen Copy
+                </button>
+              </div>
+
+              {/* Email Action */}
               <button
-                onClick={handlePrint}
-                className="flex-1 py-2.5 rounded-xl bg-blue-600 text-white font-bold text-xs shadow-md hover:shadow-lg transition-all"
+                onClick={() => {
+                  const pending = queueEmailForOrder(lastOrder);
+                  toast.success(`Receipt queued for email${navigator.onLine ? '' : ' (will send when online)'}`, {
+                    icon: '📧',
+                  });
+                }}
+                className="w-full py-2.5 rounded-xl bg-purple-600 text-white font-bold text-xs shadow-md hover:shadow-lg transition-all"
               >
-                <i className="fas fa-print mr-1"></i> Print Receipt
+                <i className="fas fa-envelope mr-1"></i> Email Receipt
+                {!navigator.onLine && <span className="ml-1 text-[9px] opacity-75">(Queued - Offline)</span>}
               </button>
+
+              {/* Done */}
               <button
                 onClick={() => { setShowReceipt(false); setLastOrder(null); }}
-                className="flex-1 py-2.5 rounded-xl bg-gray-100 text-gray-700 font-bold text-xs hover:bg-gray-200 transition-all"
+                className="w-full py-2.5 rounded-xl bg-gray-100 text-gray-700 font-bold text-xs hover:bg-gray-200 transition-all"
               >
-                New Order
+                <i className="fas fa-plus mr-1"></i> New Order
               </button>
             </div>
           </div>

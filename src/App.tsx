@@ -1,27 +1,45 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useStore } from './store/store';
 import LoginScreen from './components/LoginScreen';
 import POSScreen from './components/POSScreen';
 import AdminPanel from './components/AdminPanel';
+import { syncPendingEmails } from './utils/syncService';
 import { Toaster } from 'react-hot-toast';
 
 type View = 'pos' | 'admin';
 
 export default function App() {
-  const { isLoggedIn, currentUser } = useStore();
+  const { isLoggedIn, currentUser, pendingEmails, emailConfig } = useStore();
   const [currentView, setCurrentView] = useState<View>('pos');
   const [isOnline, setIsOnline] = useState(navigator.onLine);
+  const [syncing, setSyncing] = useState(false);
+  const hasSyncedRef = useRef(false);
+
+  const pendingCount = pendingEmails.filter(e => e.status === 'pending' || e.status === 'failed').length;
 
   useEffect(() => {
-    const handleOnline = () => setIsOnline(true);
-    const handleOffline = () => setIsOnline(false);
+    const handleOnline = async () => {
+      setIsOnline(true);
+      // Auto-sync when coming back online
+      if (emailConfig.enabled && emailConfig.autoSyncOnConnect && pendingCount > 0 && !hasSyncedRef.current) {
+        hasSyncedRef.current = true;
+        setSyncing(true);
+        await syncPendingEmails();
+        setSyncing(false);
+        setTimeout(() => { hasSyncedRef.current = false; }, 60000); // Prevent rapid re-syncs
+      }
+    };
+    const handleOffline = () => {
+      setIsOnline(false);
+      hasSyncedRef.current = false;
+    };
     window.addEventListener('online', handleOnline);
     window.addEventListener('offline', handleOffline);
     return () => {
       window.removeEventListener('online', handleOnline);
       window.removeEventListener('offline', handleOffline);
     };
-  }, []);
+  }, [emailConfig.enabled, emailConfig.autoSyncOnConnect, pendingCount]);
 
   if (!isLoggedIn) {
     return (
@@ -74,12 +92,24 @@ export default function App() {
         </div>
 
         <div className="flex items-center gap-3">
-          {/* Online/Offline Status */}
+          {/* Online/Offline Status with Sync Indicator */}
           <div className={`flex items-center gap-1.5 px-2 py-1 rounded-full text-xs font-medium ${
+            syncing ? 'bg-blue-500/20 text-blue-200' :
             isOnline ? 'bg-green-500/20 text-green-200' : 'bg-red-500/20 text-red-200'
           }`}>
-            <div className={`w-1.5 h-1.5 rounded-full ${isOnline ? 'bg-green-400 animate-pulse' : 'bg-red-400'}`}></div>
-            <span className="hidden sm:inline">{isOnline ? 'Online' : 'Offline'}</span>
+            {syncing ? (
+              <i className="fas fa-sync fa-spin text-[10px]"></i>
+            ) : (
+              <div className={`w-1.5 h-1.5 rounded-full ${isOnline ? 'bg-green-400 animate-pulse' : 'bg-red-400'}`}></div>
+            )}
+            <span className="hidden sm:inline">
+              {syncing ? 'Syncing...' : isOnline ? 'Online' : 'Offline'}
+            </span>
+            {pendingCount > 0 && (
+              <span className="ml-1 px-1.5 py-0.5 rounded-full bg-yellow-500 text-yellow-900 text-[9px] font-black">
+                {pendingCount}
+              </span>
+            )}
           </div>
 
           {/* User Info */}

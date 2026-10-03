@@ -1,9 +1,10 @@
 import { useState } from 'react';
 import { useStore, StaffMember, defaultPermissions, StaffPermissions } from '../store/store';
 import { menuItems } from '../data/menu';
+import { syncPendingEmails, printReceipt, queueEmailForOrder } from '../utils/syncService';
 import toast from 'react-hot-toast';
 
-type AdminTab = 'dashboard' | 'staff' | 'orders' | 'menu';
+type AdminTab = 'dashboard' | 'staff' | 'orders' | 'menu' | 'settings';
 
 export default function AdminPanel() {
   const [activeTab, setActiveTab] = useState<AdminTab>('dashboard');
@@ -14,6 +15,7 @@ export default function AdminPanel() {
     { id: 'staff' as const, label: 'Staff', icon: 'fa-users', requires: 'canManageStaff' as keyof StaffPermissions },
     { id: 'orders' as const, label: 'Orders', icon: 'fa-receipt', requires: 'canViewAllOrders' as keyof StaffPermissions },
     { id: 'menu' as const, label: 'Menu', icon: 'fa-burger', requires: 'canEditMenu' as keyof StaffPermissions },
+    { id: 'settings' as const, label: 'Settings', icon: 'fa-envelope', requires: 'canManageStaff' as keyof StaffPermissions },
   ].filter(tab => !tab.requires || (currentUser?.permissions[tab.requires]));
 
   return (
@@ -42,6 +44,7 @@ export default function AdminPanel() {
         {activeTab === 'staff' && <StaffManager />}
         {activeTab === 'orders' && <OrderHistory />}
         {activeTab === 'menu' && <MenuManager />}
+        {activeTab === 'settings' && <SettingsPanel />}
       </div>
     </div>
   );
@@ -476,19 +479,45 @@ function OrderHistory() {
                   <span className="capitalize"><i className="fas fa-tag mr-1"></i>{order.orderType}</span>
                   <span><i className="fas fa-credit-card mr-1"></i>{order.paymentMethod}</span>
                 </div>
-                {order.status === 'completed' && (
+                <div className="flex items-center gap-1">
+                  <button
+                    onClick={() => printReceipt(order, 'customer')}
+                    className="px-2 py-1 rounded-lg bg-blue-100 text-blue-600 text-[10px] font-bold hover:bg-blue-200"
+                    title="Print receipt"
+                  >
+                    <i className="fas fa-print"></i>
+                  </button>
+                  <button
+                    onClick={() => printReceipt(order, 'kitchen')}
+                    className="px-2 py-1 rounded-lg bg-amber-100 text-amber-600 text-[10px] font-bold hover:bg-amber-200"
+                    title="Print kitchen copy"
+                  >
+                    <i className="fas fa-utensils"></i>
+                  </button>
                   <button
                     onClick={() => {
-                      if (confirm('Refund this order?')) {
-                        refundOrder(order.id);
-                        toast.success('Order refunded');
-                      }
+                      queueEmailForOrder(order);
+                      toast.success('Receipt queued for email');
                     }}
-                    className="px-2 py-1 rounded-lg bg-red-100 text-red-600 text-[10px] font-bold hover:bg-red-200"
+                    className="px-2 py-1 rounded-lg bg-purple-100 text-purple-600 text-[10px] font-bold hover:bg-purple-200"
+                    title="Email receipt"
                   >
-                    <i className="fas fa-undo mr-1"></i>Refund
+                    <i className="fas fa-envelope"></i>
                   </button>
-                )}
+                  {order.status === 'completed' && (
+                    <button
+                      onClick={() => {
+                        if (confirm('Refund this order?')) {
+                          refundOrder(order.id);
+                          toast.success('Order refunded');
+                        }
+                      }}
+                      className="px-2 py-1 rounded-lg bg-red-100 text-red-600 text-[10px] font-bold hover:bg-red-200"
+                    >
+                      <i className="fas fa-undo mr-1"></i>Refund
+                    </button>
+                  )}
+                </div>
               </div>
               <div className="mt-2 flex flex-wrap gap-1">
                 {order.items.map((item, i) => (
@@ -597,6 +626,215 @@ function MenuManager() {
             </div>
           </div>
         ))}
+      </div>
+    </div>
+  );
+}
+
+// Settings Panel (Email & Sync)
+function SettingsPanel() {
+  const { emailConfig, updateEmailConfig, pendingEmails, clearSentEmails, removePendingEmail } = useStore();
+  const [localConfig, setLocalConfig] = useState(emailConfig);
+  const [syncing, setSyncing] = useState(false);
+
+  const handleSave = () => {
+    updateEmailConfig(localConfig);
+    toast.success('Settings saved!');
+  };
+
+  const pendingCount = pendingEmails.filter(e => e.status === 'pending' || e.status === 'failed').length;
+  const sentCount = pendingEmails.filter(e => e.status === 'sent').length;
+
+  const handleManualSync = async () => {
+    if (!navigator.onLine) {
+      toast.error('You are offline. Emails will sync automatically when connected.');
+      return;
+    }
+    setSyncing(true);
+    const result = await syncPendingEmails();
+    setSyncing(false);
+    if (result.sent > 0) {
+      toast.success(`Synced ${result.sent} email(s)!`);
+    } else {
+      toast('No emails to sync');
+    }
+  };
+
+  return (
+    <div className="p-4 space-y-4 max-w-3xl">
+      <h2 className="font-bold text-gray-800">Email & Sync Settings</h2>
+
+      {/* Email Configuration */}
+      <div className="bg-white rounded-xl p-4 border border-gray-100 space-y-3">
+        <h3 className="font-bold text-sm text-gray-800 flex items-center gap-2">
+          <i className="fas fa-envelope text-purple-500"></i>
+          Email Receipts
+        </h3>
+
+        <div className="flex items-center justify-between p-3 rounded-lg bg-gray-50">
+          <div>
+            <p className="text-xs font-bold text-gray-700">Enable Email Sync</p>
+            <p className="text-[10px] text-gray-400">Automatically email receipts to configured address</p>
+          </div>
+          <button
+            onClick={() => setLocalConfig({ ...localConfig, enabled: !localConfig.enabled })}
+            className={`w-10 h-5 rounded-full transition-all ${localConfig.enabled ? 'bg-purple-500' : 'bg-gray-300'}`}
+          >
+            <div className={`w-4 h-4 rounded-full bg-white shadow transition-transform ${localConfig.enabled ? 'translate-x-5' : 'translate-x-0.5'}`}></div>
+          </button>
+        </div>
+
+        <div>
+          <label className="text-xs font-bold text-gray-700 mb-1 block">Recipient Email</label>
+          <input
+            type="email"
+            value={localConfig.recipientEmail}
+            onChange={(e) => setLocalConfig({ ...localConfig, recipientEmail: e.target.value })}
+            placeholder="orders@flames.om"
+            className="w-full px-3 py-2 rounded-lg border border-gray-200 focus:border-purple-400 focus:ring-2 focus:ring-purple-100 outline-none text-sm"
+          />
+        </div>
+
+        <div className="flex items-center justify-between p-3 rounded-lg bg-gray-50">
+          <div>
+            <p className="text-xs font-bold text-gray-700">Auto-sync When Online</p>
+            <p className="text-[10px] text-gray-400">Automatically send queued emails when internet returns</p>
+          </div>
+          <button
+            onClick={() => setLocalConfig({ ...localConfig, autoSyncOnConnect: !localConfig.autoSyncOnConnect })}
+            className={`w-10 h-5 rounded-full transition-all ${localConfig.autoSyncOnConnect ? 'bg-purple-500' : 'bg-gray-300'}`}
+          >
+            <div className={`w-4 h-4 rounded-full bg-white shadow transition-transform ${localConfig.autoSyncOnConnect ? 'translate-x-5' : 'translate-x-0.5'}`}></div>
+          </button>
+        </div>
+
+        <button
+          onClick={handleSave}
+          className="w-full py-2.5 rounded-xl bg-gradient-to-r from-purple-500 to-purple-600 text-white font-bold text-sm shadow-md"
+        >
+          <i className="fas fa-save mr-1"></i> Save Settings
+        </button>
+      </div>
+
+      {/* Branch Info */}
+      <div className="bg-white rounded-xl p-4 border border-gray-100 space-y-3">
+        <h3 className="font-bold text-sm text-gray-800 flex items-center gap-2">
+          <i className="fas fa-store text-orange-500"></i>
+          Branch Info (Shown on Receipts)
+        </h3>
+
+        <div>
+          <label className="text-xs font-bold text-gray-700 mb-1 block">Branch Name</label>
+          <input
+            type="text"
+            value={localConfig.branchName}
+            onChange={(e) => setLocalConfig({ ...localConfig, branchName: e.target.value })}
+            className="w-full px-3 py-2 rounded-lg border border-gray-200 focus:border-orange-400 focus:ring-2 focus:ring-orange-100 outline-none text-sm"
+          />
+        </div>
+
+        <div className="grid grid-cols-2 gap-2">
+          <div>
+            <label className="text-xs font-bold text-gray-700 mb-1 block">Address</label>
+            <input
+              type="text"
+              value={localConfig.branchAddress}
+              onChange={(e) => setLocalConfig({ ...localConfig, branchAddress: e.target.value })}
+              className="w-full px-3 py-2 rounded-lg border border-gray-200 focus:border-orange-400 focus:ring-2 focus:ring-orange-100 outline-none text-sm"
+            />
+          </div>
+          <div>
+            <label className="text-xs font-bold text-gray-700 mb-1 block">Phone</label>
+            <input
+              type="text"
+              value={localConfig.branchPhone}
+              onChange={(e) => setLocalConfig({ ...localConfig, branchPhone: e.target.value })}
+              className="w-full px-3 py-2 rounded-lg border border-gray-200 focus:border-orange-400 focus:ring-2 focus:ring-orange-100 outline-none text-sm"
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* Sync Queue */}
+      <div className="bg-white rounded-xl p-4 border border-gray-100">
+        <div className="flex items-center justify-between mb-3">
+          <h3 className="font-bold text-sm text-gray-800 flex items-center gap-2">
+            <i className="fas fa-sync-alt text-blue-500"></i>
+            Email Queue
+          </h3>
+          <button
+            onClick={handleManualSync}
+            disabled={syncing || pendingCount === 0}
+            className="px-3 py-1.5 rounded-lg bg-blue-500 text-white text-xs font-bold disabled:opacity-40 hover:bg-blue-600"
+          >
+            {syncing ? (
+              <><i className="fas fa-spinner fa-spin mr-1"></i> Syncing...</>
+            ) : (
+              <><i className="fas fa-sync mr-1"></i> Sync Now</>
+            )}
+          </button>
+        </div>
+
+        <div className="grid grid-cols-3 gap-2 mb-3">
+          <div className="p-2 rounded-lg bg-yellow-50 text-center">
+            <p className="text-lg font-black text-yellow-600">{pendingCount}</p>
+            <p className="text-[10px] text-yellow-600">Pending</p>
+          </div>
+          <div className="p-2 rounded-lg bg-green-50 text-center">
+            <p className="text-lg font-black text-green-600">{sentCount}</p>
+            <p className="text-[10px] text-green-600">Sent</p>
+          </div>
+          <div className="p-2 rounded-lg bg-red-50 text-center">
+            <p className="text-lg font-black text-red-600">{pendingEmails.filter(e => e.status === 'failed').length}</p>
+            <p className="text-[10px] text-red-600">Failed</p>
+          </div>
+        </div>
+
+        {pendingEmails.length === 0 ? (
+          <p className="text-xs text-gray-400 text-center py-4">No emails in queue</p>
+        ) : (
+          <div className="space-y-1.5 max-h-60 overflow-y-auto">
+            {pendingEmails.slice().reverse().map(email => (
+              <div key={email.id} className="flex items-center justify-between p-2 rounded-lg bg-gray-50 text-xs">
+                <div className="flex items-center gap-2">
+                  <span className={`w-2 h-2 rounded-full ${
+                    email.status === 'sent' ? 'bg-green-500' :
+                    email.status === 'pending' ? 'bg-yellow-500' :
+                    email.status === 'sending' ? 'bg-blue-500 animate-pulse' :
+                    'bg-red-500'
+                  }`}></span>
+                  <span className="font-mono text-gray-700">{email.orderId}</span>
+                  <span className="text-gray-400 capitalize">{email.status}</span>
+                </div>
+                <div className="flex items-center gap-1">
+                  <span className="text-[10px] text-gray-400">
+                    {new Date(email.createdAt).toLocaleTimeString()}
+                  </span>
+                  {email.status === 'sent' && (
+                    <button
+                      onClick={() => removePendingEmail(email.id)}
+                      className="w-5 h-5 rounded bg-gray-200 flex items-center justify-center text-gray-400 hover:text-red-500"
+                    >
+                      <i className="fas fa-times text-[8px]"></i>
+                    </button>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {sentCount > 0 && (
+          <button
+            onClick={() => {
+              clearSentEmails();
+              toast.success('Cleared sent emails');
+            }}
+            className="mt-2 w-full py-1.5 rounded-lg bg-gray-100 text-gray-600 text-xs font-bold hover:bg-gray-200"
+          >
+            <i className="fas fa-trash mr-1"></i> Clear Sent Emails
+          </button>
+        )}
       </div>
     </div>
   );
