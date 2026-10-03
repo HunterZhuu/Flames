@@ -55,6 +55,19 @@ export default function App() {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
+  // Listen for navigation events from dashboard
+  useEffect(() => {
+    const handleNavigate = (event: CustomEvent) => {
+      const view = event.detail as View;
+      if (view === 'pos') {
+        setCurrentView('pos');
+      }
+    };
+
+    window.addEventListener('navigate', handleNavigate as EventListener);
+    return () => window.removeEventListener('navigate', handleNavigate as EventListener);
+  }, []);
+
   const handleSwitchUser = () => {
     setShowUserMenu(false);
     setSwitchingUser(true);

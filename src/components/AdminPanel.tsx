@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useStore, StaffMember, defaultPermissions, StaffPermissions } from '../store/store';
 import { menuItems, getEffectiveMenu, categories, MenuItem } from '../data/menu';
 import { syncPendingEmails, printReceipt, queueEmailForOrder } from '../utils/syncService';
@@ -10,6 +10,17 @@ type AdminTab = 'dashboard' | 'staff' | 'orders' | 'menu' | 'settings';
 export default function AdminPanel() {
   const [activeTab, setActiveTab] = useState<AdminTab>('dashboard');
   const { currentUser } = useStore();
+
+  // Listen for navigation events from dashboard
+  useEffect(() => {
+    const handleNavigate = (event: CustomEvent) => {
+      const tab = event.detail as AdminTab;
+      setActiveTab(tab);
+    };
+
+    window.addEventListener('navigate', handleNavigate as EventListener);
+    return () => window.removeEventListener('navigate', handleNavigate as EventListener);
+  }, []);
 
   const tabs = [
     { id: 'dashboard' as const, label: 'Dashboard', icon: 'fa-chart-line' },
@@ -53,123 +64,173 @@ export default function AdminPanel() {
 
 // Dashboard
 function Dashboard() {
-  const { orders } = useStore();
+  const { orders, currentUser } = useStore();
   
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   
   const todayOrders = orders.filter(o => o.timestamp >= today.getTime() && o.status === 'completed');
   const todayRevenue = todayOrders.reduce((sum, o) => sum + o.total, 0);
-  const totalOrders = orders.filter(o => o.status === 'completed');
-  const totalRevenue = totalOrders.reduce((sum, o) => sum + o.total, 0);
   
-  // Top selling items
-  const itemCounts: Record<string, { name: string; count: number; revenue: number }> = {};
-  totalOrders.forEach(order => {
-    order.items.forEach(item => {
-      if (!itemCounts[item.product.id]) {
-        itemCounts[item.product.id] = { name: item.product.name, count: 0, revenue: 0 };
-      }
-      itemCounts[item.product.id].count += item.quantity;
-      itemCounts[item.product.id].revenue += item.product.price * item.quantity;
-    });
-  });
-  const topItems = Object.values(itemCounts).sort((a, b) => b.count - a.count).slice(0, 5);
-
-  // Order type breakdown
-  const orderTypeBreakdown = totalOrders.reduce((acc, o) => {
-    acc[o.orderType] = (acc[o.orderType] || 0) + 1;
-    return acc;
-  }, {} as Record<string, number>);
-
-  // Total items sold
-  const totalItemsSold = totalOrders.reduce((sum, o) => sum + o.items.reduce((s, i) => s + i.quantity, 0), 0);
-
-  return (
-    <div className="p-4 space-y-4">
-      {/* Stats Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        <StatCard title="Today's Orders" value={todayOrders.length.toString()} icon="fa-shopping-bag" color="blue" />
-        <StatCard title="Today's Revenue" value={`OMR ${todayRevenue.toFixed(3)}`} icon="fa-coins" color="green" />
-        <StatCard title="Total Orders" value={totalOrders.length.toString()} icon="fa-receipt" color="purple" />
-        <StatCard title="Total Revenue" value={`OMR ${totalRevenue.toFixed(3)}`} icon="fa-chart-line" color="orange" />
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        {/* Top Selling Items */}
-        <div className="bg-white rounded-xl p-4 border border-gray-100">
-          <h3 className="font-bold text-sm text-gray-800 mb-3">
-            <i className="fas fa-fire text-orange-500 mr-1"></i> Top Selling Items
-          </h3>
-          {topItems.length === 0 ? (
-            <p className="text-xs text-gray-400 text-center py-4">No sales data yet</p>
-          ) : (
-            <div className="space-y-2">
-              {topItems.map((item, i) => (
-                <div key={i} className="flex items-center justify-between p-2 rounded-lg bg-gray-50">
-                  <div className="flex items-center gap-2">
-                    <span className="w-5 h-5 rounded-full bg-orange-100 text-orange-600 text-[10px] font-bold flex items-center justify-center">{i + 1}</span>
-                    <span className="text-xs font-medium text-gray-700">{item.name}</span>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-xs font-bold text-gray-800">{item.count} sold</p>
-                    <p className="text-[10px] text-gray-400">OMR {item.revenue.toFixed(3)}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-
-        {/* Order Types & Stats */}
-        <div className="space-y-4">
-          <div className="bg-white rounded-xl p-4 border border-gray-100">
-            <h3 className="font-bold text-sm text-gray-800 mb-3">
-              <i className="fas fa-utensils text-green-500 mr-1"></i> Order Types
-            </h3>
-            {Object.keys(orderTypeBreakdown).length === 0 ? (
-              <p className="text-xs text-gray-400 text-center py-4">No data yet</p>
-            ) : (
-              <div className="space-y-2">
-                {Object.entries(orderTypeBreakdown).map(([type, count]) => (
-                  <div key={type} className="flex items-center justify-between">
-                    <span className="text-xs text-gray-600 capitalize">{type === 'dine-in' ? 'Dine In' : type}</span>
-                    <span className="text-xs font-bold text-gray-800">{count} orders</span>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-
-          <div className="bg-white rounded-xl p-4 border border-gray-100">
-            <h3 className="font-bold text-sm text-gray-800 mb-3">
-              <i className="fas fa-box text-purple-500 mr-1"></i> Total Items Sold
-            </h3>
-            <div className="text-center py-4">
-              <p className="text-3xl font-black text-purple-600">{totalItemsSold}</p>
-              <p className="text-xs text-gray-400 mt-1">items across all orders</p>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function StatCard({ title, value, icon, color }: { title: string; value: string; icon: string; color: string }) {
-  const colors: Record<string, string> = {
-    blue: 'bg-blue-50 text-blue-600',
-    green: 'bg-green-50 text-green-600',
-    purple: 'bg-purple-50 text-purple-600',
-    orange: 'bg-orange-50 text-orange-600',
+  const getGreeting = () => {
+    const hour = new Date().getHours();
+    if (hour < 12) return 'Good Morning';
+    if (hour < 17) return 'Good Afternoon';
+    return 'Good Evening';
   };
+
   return (
-    <div className="bg-white rounded-xl p-4 border border-gray-100">
-      <div className={`w-8 h-8 rounded-lg ${colors[color]} flex items-center justify-center mb-2`}>
-        <i className={`fas ${icon} text-sm`}></i>
+    <div className="p-6 space-y-6">
+      {/* Welcome Section */}
+      <div className="bg-gradient-to-br from-red-500 via-orange-500 to-red-600 rounded-2xl p-6 text-white shadow-lg">
+        <div className="flex items-start justify-between">
+          <div>
+            <p className="text-sm opacity-90 mb-1">{getGreeting()}</p>
+            <h1 className="text-2xl font-black mb-2">Welcome back, {currentUser?.name}!</h1>
+            <p className="text-sm opacity-90">
+              {today.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+            </p>
+          </div>
+          <div className="text-6xl opacity-20">🔥</div>
+        </div>
       </div>
-      <p className="text-lg font-black text-gray-900">{value}</p>
-      <p className="text-[10px] text-gray-400 font-medium">{title}</p>
+
+      {/* Today's Performance */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 rounded-xl bg-blue-100 flex items-center justify-center">
+                <i className="fas fa-shopping-bag text-blue-600 text-xl"></i>
+              </div>
+              <div>
+                <p className="text-xs text-gray-500 font-medium">Today's Orders</p>
+                <p className="text-3xl font-black text-gray-900">{todayOrders.length}</p>
+              </div>
+            </div>
+          </div>
+          <div className="pt-4 border-t border-gray-100">
+            <p className="text-xs text-gray-500">
+              <i className="fas fa-info-circle mr-1"></i>
+              Completed orders today
+            </p>
+          </div>
+        </div>
+
+        <div className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 rounded-xl bg-green-100 flex items-center justify-center">
+                <i className="fas fa-coins text-green-600 text-xl"></i>
+              </div>
+              <div>
+                <p className="text-xs text-gray-500 font-medium">Today's Revenue</p>
+                <p className="text-3xl font-black text-gray-900">OMR {todayRevenue.toFixed(3)}</p>
+              </div>
+            </div>
+          </div>
+          <div className="pt-4 border-t border-gray-100">
+            <p className="text-xs text-gray-500">
+              <i className="fas fa-chart-line mr-1"></i>
+              Total sales for today
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* Quick Actions */}
+      <div className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm">
+        <h2 className="text-lg font-bold text-gray-900 mb-4">Quick Actions</h2>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          <button
+            onClick={() => {
+              const event = new CustomEvent('navigate', { detail: 'pos' });
+              window.dispatchEvent(event);
+            }}
+            className="flex flex-col items-center gap-2 p-4 rounded-xl bg-gradient-to-br from-blue-50 to-blue-100 hover:from-blue-100 hover:to-blue-200 transition-all group"
+          >
+            <div className="w-12 h-12 rounded-xl bg-blue-500 flex items-center justify-center group-hover:scale-110 transition-transform">
+              <i className="fas fa-cash-register text-white text-xl"></i>
+            </div>
+            <span className="text-xs font-bold text-gray-700">Open POS</span>
+          </button>
+
+          <button
+            onClick={() => {
+              const event = new CustomEvent('navigate', { detail: 'orders' });
+              window.dispatchEvent(event);
+            }}
+            className="flex flex-col items-center gap-2 p-4 rounded-xl bg-gradient-to-br from-purple-50 to-purple-100 hover:from-purple-100 hover:to-purple-200 transition-all group"
+          >
+            <div className="w-12 h-12 rounded-xl bg-purple-500 flex items-center justify-center group-hover:scale-110 transition-transform">
+              <i className="fas fa-receipt text-white text-xl"></i>
+            </div>
+            <span className="text-xs font-bold text-gray-700">View Orders</span>
+          </button>
+
+          <button
+            onClick={() => {
+              const event = new CustomEvent('navigate', { detail: 'menu' });
+              window.dispatchEvent(event);
+            }}
+            className="flex flex-col items-center gap-2 p-4 rounded-xl bg-gradient-to-br from-orange-50 to-orange-100 hover:from-orange-100 hover:to-orange-200 transition-all group"
+          >
+            <div className="w-12 h-12 rounded-xl bg-orange-500 flex items-center justify-center group-hover:scale-110 transition-transform">
+              <i className="fas fa-burger text-white text-xl"></i>
+            </div>
+            <span className="text-xs font-bold text-gray-700">Manage Menu</span>
+          </button>
+
+          <button
+            onClick={() => {
+              const event = new CustomEvent('navigate', { detail: 'staff' });
+              window.dispatchEvent(event);
+            }}
+            className="flex flex-col items-center gap-2 p-4 rounded-xl bg-gradient-to-br from-green-50 to-green-100 hover:from-green-100 hover:to-green-200 transition-all group"
+          >
+            <div className="w-12 h-12 rounded-xl bg-green-500 flex items-center justify-center group-hover:scale-110 transition-transform">
+              <i className="fas fa-users text-white text-xl"></i>
+            </div>
+            <span className="text-xs font-bold text-gray-700">Staff</span>
+          </button>
+        </div>
+      </div>
+
+      {/* System Status */}
+      <div className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm">
+        <h2 className="text-lg font-bold text-gray-900 mb-4">System Status</h2>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="flex items-center gap-3 p-3 rounded-xl bg-gray-50">
+            <div className="w-10 h-10 rounded-lg bg-green-100 flex items-center justify-center">
+              <i className="fas fa-wifi text-green-600"></i>
+            </div>
+            <div>
+              <p className="text-xs font-bold text-gray-700">Online Status</p>
+              <p className="text-xs text-gray-500">System operational</p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-3 p-3 rounded-xl bg-gray-50">
+            <div className="w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center">
+              <i className="fas fa-database text-blue-600"></i>
+            </div>
+            <div>
+              <p className="text-xs font-bold text-gray-700">Data Storage</p>
+              <p className="text-xs text-gray-500">All data saved locally</p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-3 p-3 rounded-xl bg-gray-50">
+            <div className="w-10 h-10 rounded-lg bg-purple-100 flex items-center justify-center">
+              <i className="fas fa-print text-purple-600"></i>
+            </div>
+            <div>
+              <p className="text-xs font-bold text-gray-700">Print Ready</p>
+              <p className="text-xs text-gray-500">Receipts & tickets</p>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
