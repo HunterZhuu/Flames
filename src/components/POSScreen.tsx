@@ -57,14 +57,19 @@ export default function POSScreen() {
   };
 
   const handlePayment = () => {
+    let cashTendered: number | undefined;
+    let change: number | undefined;
+    
     if (paymentMethod === 'cash') {
       const cash = parseFloat(cashAmount);
       if (isNaN(cash) || cash < total) {
         toast.error('Insufficient cash amount');
         return;
       }
+      cashTendered = cash;
+      change = cash - total;
     }
-    const order = completeOrder(paymentMethod);
+    const order = completeOrder(paymentMethod, cashTendered, change);
     setLastOrder(order);
     setShowPayment(false);
     setShowReceipt(true);
@@ -438,6 +443,14 @@ export default function POSScreen() {
                 <div className="flex justify-between font-bold text-xs mt-1"><span>TOTAL</span><span>OMR {lastOrder.total.toFixed(3)}</span></div>
                 <div className="border-t border-dashed border-gray-300 my-2"></div>
                 <div className="flex justify-between text-[10px]"><span>Payment</span><span className="capitalize">{lastOrder.paymentMethod}</span></div>
+                {lastOrder.paymentMethod === 'cash' && lastOrder.cashTendered !== undefined && (
+                  <>
+                    <div className="flex justify-between text-[10px]"><span>Cash Tendered</span><span>OMR {lastOrder.cashTendered.toFixed(3)}</span></div>
+                    {lastOrder.change !== undefined && lastOrder.change > 0 && (
+                      <div className="flex justify-between text-[10px] font-bold text-green-600"><span>Change</span><span>OMR {lastOrder.change.toFixed(3)}</span></div>
+                    )}
+                  </>
+                )}
                 <div className="text-center mt-2 text-[10px] text-gray-500">
                   <p>Thank you for choosing Flames! 🔥</p>
                   <p>www.instagram.com/flames.om</p>

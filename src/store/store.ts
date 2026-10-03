@@ -16,6 +16,8 @@ export interface Order {
   tax: number;
   total: number;
   paymentMethod: string;
+  cashTendered?: number; // Amount of cash given by customer
+  change?: number; // Change to return to customer
   cashier: string;
   timestamp: number;
   orderType: 'dine-in' | 'takeaway' | 'delivery';
@@ -181,7 +183,7 @@ interface AppState {
   clearCart: () => void;
   setOrderType: (type: 'dine-in' | 'takeaway' | 'delivery') => void;
   setTableNumber: (num: string) => void;
-  completeOrder: (paymentMethod: string) => Order;
+  completeOrder: (paymentMethod: string, cashTendered?: number, change?: number) => Order;
   refundOrder: (orderId: string) => void;
   addStaff: (member: Omit<StaffMember, 'id' | 'createdAt'>) => void;
   updateStaff: (id: string, updates: Partial<StaffMember>) => void;
@@ -283,7 +285,7 @@ export const useStore = create<AppState>()(
       setOrderType: (type) => set({ orderType: type }),
       setTableNumber: (num) => set({ tableNumber: num }),
 
-      completeOrder: (paymentMethod: string) => {
+      completeOrder: (paymentMethod: string, cashTendered?: number, change?: number) => {
         const state = get();
         const subtotal = state.getCartSubtotal();
         const tax = state.getCartTax();
@@ -296,6 +298,8 @@ export const useStore = create<AppState>()(
           tax,
           total,
           paymentMethod,
+          cashTendered: paymentMethod === 'cash' ? cashTendered : undefined,
+          change: paymentMethod === 'cash' && change ? change : undefined,
           cashier: state.currentUser?.name || 'Unknown',
           timestamp: Date.now(),
           orderType: state.orderType,

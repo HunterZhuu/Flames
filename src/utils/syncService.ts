@@ -83,6 +83,10 @@ export function generateReceiptHTML(order: Order, branchInfo: { name: string; ad
     <!-- Payment -->
     <div style="font-size: 11px; text-align: center; margin-bottom: 10px;">
       <p style="margin: 2px 0;"><strong>Payment:</strong> <span style="text-transform: capitalize;">${order.paymentMethod}</span></p>
+      ${order.paymentMethod === 'cash' && order.cashTendered !== undefined ? `
+        <p style="margin: 2px 0;"><strong>Cash Tendered:</strong> OMR ${order.cashTendered.toFixed(3)}</p>
+        ${order.change !== undefined && order.change > 0 ? `<p style="margin: 2px 0; color: #16a34a; font-weight: bold;"><strong>Change:</strong> OMR ${order.change.toFixed(3)}</p>` : ''}
+      ` : ''}
     </div>
 
     <!-- Footer -->
@@ -133,6 +137,14 @@ export function generateThermalReceipt(order: Order, branchInfo: { name: string;
   receipt += `TOTAL${' '.repeat(21)}OMR ${order.total.toFixed(3)}\n`;
   receipt += `${doubleLine}\n`;
   receipt += `Payment: ${order.paymentMethod.toUpperCase()}\n`;
+  
+  if (order.paymentMethod === 'cash' && order.cashTendered !== undefined) {
+    receipt += `Cash Tendered: OMR ${order.cashTendered.toFixed(3)}\n`;
+    if (order.change !== undefined && order.change > 0) {
+      receipt += `CHANGE: OMR ${order.change.toFixed(3)}\n`;
+    }
+  }
+  
   receipt += `${line}\n`;
   receipt += `\n`;
   receipt += `    Thank you for choosing Flames! 🔥\n`;
