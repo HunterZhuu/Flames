@@ -387,13 +387,15 @@ function StaffManager() {
               <div>
                 <label className="text-xs font-bold text-gray-700 mb-2 block">Permissions</label>
                 <div className="space-y-1.5">
-                  {(Object.entries(formData.permissions) as [keyof StaffPermissions, boolean][]).map(([key, value]) => (
+                  {(Object.entries(formData.permissions) as [keyof StaffPermissions, any][])
+                    .filter(([key]) => key !== 'allowedCategories')
+                    .map(([key, value]) => (
                     <div key={key} className="flex items-center justify-between p-2 rounded-lg bg-gray-50">
                       <span className="text-xs text-gray-700 capitalize">
                         {key.replace(/([A-Z])/g, ' $1').replace('can', '').trim()}
                       </span>
                       <button
-                        onClick={() => handlePermissionToggle(key)}
+                        onClick={() => handlePermissionToggle(key as keyof StaffPermissions)}
                         className={`w-9 h-5 rounded-full transition-all ${value ? 'bg-orange-500' : 'bg-gray-300'}`}
                       >
                         <div className={`w-4 h-4 rounded-full bg-white shadow transition-transform ${value ? 'translate-x-4' : 'translate-x-0.5'}`}></div>
@@ -402,6 +404,64 @@ function StaffManager() {
                   ))}
                 </div>
               </div>
+
+              {/* Allowed Categories */}
+              {formData.permissions.canProcessOrders && (
+                <div>
+                  <label className="text-xs font-bold text-gray-700 mb-2 block">
+                    <i className="fas fa-utensils mr-1 text-orange-500"></i>
+                    Menu Access (Categories to Sell)
+                  </label>
+                  <p className="text-[10px] text-gray-400 mb-2">
+                    {formData.permissions.allowedCategories.length === 0 
+                      ? '✓ All categories accessible (no restrictions)' 
+                      : `${formData.permissions.allowedCategories.length} categories selected`}
+                  </p>
+                  <div className="grid grid-cols-2 gap-1.5 max-h-48 overflow-y-auto p-2 bg-gray-50 rounded-lg">
+                    {categories.filter(c => c.id !== 'all').map(cat => {
+                      const isSelected = formData.permissions.allowedCategories.includes(cat.id);
+                      return (
+                        <button
+                          key={cat.id}
+                          onClick={() => {
+                            const current = formData.permissions.allowedCategories;
+                            const updated = isSelected 
+                              ? current.filter(c => c !== cat.id)
+                              : [...current, cat.id];
+                            setFormData({
+                              ...formData,
+                              permissions: { ...formData.permissions, allowedCategories: updated }
+                            });
+                          }}
+                          className={`flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium transition-all ${
+                            isSelected
+                              ? 'bg-orange-500 text-white shadow-sm'
+                              : 'bg-white text-gray-600 hover:bg-gray-100 border border-gray-200'
+                          }`}
+                        >
+                          <span>{cat.emoji}</span>
+                          <span className="truncate">{cat.name}</span>
+                          {isSelected && <i className="fas fa-check text-[10px] ml-auto"></i>}
+                        </button>
+                      );
+                    })}
+                  </div>
+                  {formData.permissions.allowedCategories.length > 0 && (
+                    <button
+                      onClick={() => {
+                        setFormData({
+                          ...formData,
+                          permissions: { ...formData.permissions, allowedCategories: [] }
+                        });
+                      }}
+                      className="mt-2 text-xs text-orange-600 hover:text-orange-700 font-medium"
+                    >
+                      <i className="fas fa-check-double mr-1"></i>
+                      Allow All Categories
+                    </button>
+                  )}
+                </div>
+              )}
 
               <button
                 onClick={handleSave}

@@ -42,6 +42,7 @@ export interface StaffPermissions {
   canViewAllOrders: boolean;
   canPrintReceipts: boolean;
   canApplyDiscounts: boolean;
+  allowedCategories: string[]; // Empty array = all categories allowed
 }
 
 export const defaultPermissions: Record<StaffMember['role'], StaffPermissions> = {
@@ -54,6 +55,7 @@ export const defaultPermissions: Record<StaffMember['role'], StaffPermissions> =
     canViewAllOrders: true,
     canPrintReceipts: true,
     canApplyDiscounts: true,
+    allowedCategories: [], // Empty = all categories
   },
   manager: {
     canProcessOrders: true,
@@ -64,6 +66,7 @@ export const defaultPermissions: Record<StaffMember['role'], StaffPermissions> =
     canViewAllOrders: true,
     canPrintReceipts: true,
     canApplyDiscounts: true,
+    allowedCategories: [], // Empty = all categories
   },
   cashier: {
     canProcessOrders: true,
@@ -74,6 +77,7 @@ export const defaultPermissions: Record<StaffMember['role'], StaffPermissions> =
     canViewAllOrders: false,
     canPrintReceipts: true,
     canApplyDiscounts: false,
+    allowedCategories: [], // Empty = all categories
   },
   kitchen: {
     canProcessOrders: false,
@@ -84,6 +88,7 @@ export const defaultPermissions: Record<StaffMember['role'], StaffPermissions> =
     canViewAllOrders: true,
     canPrintReceipts: false,
     canApplyDiscounts: false,
+    allowedCategories: [], // Empty = all categories
   },
 };
 

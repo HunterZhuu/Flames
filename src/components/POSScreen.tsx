@@ -23,7 +23,16 @@ export default function POSScreen() {
   const [showReceipt, setShowReceipt] = useState(false);
 
   const effectiveMenu = getEffectiveMenu(customMenuItems, removedMenuItems);
-  const filteredItems = effectiveMenu.filter(item => {
+  
+  // Filter menu based on user's allowed categories
+  const userAllowedCategories = currentUser?.permissions.allowedCategories || [];
+  const menuWithPermissions = effectiveMenu.filter(item => {
+    // If allowedCategories is empty, user has access to all categories
+    if (userAllowedCategories.length === 0) return true;
+    return userAllowedCategories.includes(item.category);
+  });
+  
+  const filteredItems = menuWithPermissions.filter(item => {
     const isAvailable = menuOverrides[item.id] === undefined ? item.available : !menuOverrides[item.id];
     const matchesCategory = activeCategory === 'all' || item.category === activeCategory;
     const matchesSearch = item.name.toLowerCase().includes(searchQuery.toLowerCase());
@@ -119,20 +128,29 @@ export default function POSScreen() {
 
         {/* Category Tabs */}
         <div className="flex gap-1.5 p-3 overflow-x-auto border-b border-gray-50">
-          {categories.map(cat => (
-            <button
-              key={cat.id}
-              onClick={() => setActiveCategory(cat.id)}
-              className={`flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-bold whitespace-nowrap transition-all ${
-                activeCategory === cat.id
-                  ? 'bg-red-600 text-white shadow-md shadow-red-200'
-                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-              }`}
-            >
-              <span>{cat.emoji}</span>
-              <span>{cat.name}</span>
-            </button>
-          ))}
+          {categories
+            .filter(cat => {
+              // Always show "All" tab
+              if (cat.id === 'all') return true;
+              // If user has no restrictions, show all categories
+              if (userAllowedCategories.length === 0) return true;
+              // Otherwise, only show allowed categories
+              return userAllowedCategories.includes(cat.id);
+            })
+            .map(cat => (
+              <button
+                key={cat.id}
+                onClick={() => setActiveCategory(cat.id)}
+                className={`flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-bold whitespace-nowrap transition-all ${
+                  activeCategory === cat.id
+                    ? 'bg-red-600 text-white shadow-md shadow-red-200'
+                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                }`}
+              >
+                <span>{cat.emoji}</span>
+                <span>{cat.name}</span>
+              </button>
+            ))}
         </div>
 
         {/* Product Grid */}
