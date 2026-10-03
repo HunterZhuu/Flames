@@ -192,6 +192,7 @@ interface AppState {
   getCartSubtotal: () => number;
   getCartTax: () => number;
   getCartTotal: () => number;
+  resetData: () => void;
 }
 
 // Default admin account
@@ -430,6 +431,17 @@ export const useStore = create<AppState>()(
 
       getCartTotal: () => {
         return get().getCartSubtotal() + get().getCartTax();
+      },
+
+      resetData: () => {
+        set({
+          orders: [],
+          pendingEmails: [],
+          customImages: {},
+          customMenuItems: [],
+          removedMenuItems: [],
+          menuOverrides: {},
+        });
       },
     }),
     {

@@ -231,6 +231,33 @@ function Dashboard() {
           </div>
         </div>
       </div>
+
+      {/* Reset Data Section */}
+      <div className="bg-white rounded-2xl p-6 border border-red-100 shadow-sm">
+        <div className="flex items-start justify-between">
+          <div>
+            <h2 className="text-lg font-bold text-gray-900 mb-2">Reset System Data</h2>
+            <p className="text-sm text-gray-600 mb-4">
+              Clear all orders, custom menu items, and email queue. This action cannot be undone.
+            </p>
+            <button
+              onClick={() => {
+                if (confirm('Are you sure you want to reset all data? This will clear:\n\n• All orders\n• Custom menu items\n• Custom images\n• Email queue\n\nThis cannot be undone!')) {
+                  useStore.getState().resetData();
+                  toast.success('System data has been reset');
+                }
+              }}
+              className="px-6 py-2.5 rounded-xl bg-red-500 text-white font-bold text-sm hover:bg-red-600 transition-all shadow-md hover:shadow-lg"
+            >
+              <i className="fas fa-trash-alt mr-2"></i>
+              Reset All Data
+            </button>
+          </div>
+          <div className="w-16 h-16 rounded-xl bg-red-100 flex items-center justify-center">
+            <i className="fas fa-exclamation-triangle text-red-500 text-2xl"></i>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
