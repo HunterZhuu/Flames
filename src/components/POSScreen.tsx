@@ -178,17 +178,20 @@ export default function POSScreen() {
                       {inCart.quantity}
                     </div>
                   )}
-                  {customImages[item.id] ? (
+                  {(customImages[item.id] || item.image) ? (
                     <img 
-                      src={customImages[item.id]} 
+                      src={customImages[item.id] || item.image} 
                       alt={item.name}
                       className="w-10 h-10 rounded-lg object-cover mb-2"
+                      onError={(e) => {
+                        e.currentTarget.style.display = 'none';
+                        e.currentTarget.nextElementSibling?.classList.remove('hidden');
+                      }}
                     />
-                  ) : (
-                    <div className={`w-10 h-10 rounded-lg bg-gradient-to-br ${item.color} flex items-center justify-center text-lg mb-2`}>
-                      {item.emoji}
-                    </div>
-                  )}
+                  ) : null}
+                  <div className={`${(customImages[item.id] || item.image) ? 'hidden' : ''} w-10 h-10 rounded-lg bg-gradient-to-br ${item.color} flex items-center justify-center text-lg mb-2`}>
+                    {item.emoji}
+                  </div>
                   <span className="text-[11px] font-bold text-gray-800 text-center leading-tight mb-1 line-clamp-2">
                     {item.name}
                   </span>
@@ -243,17 +246,20 @@ export default function POSScreen() {
             <div className="space-y-1.5">
               {cart.map(item => (
                 <div key={item.product.id} className="flex items-center gap-2 p-2 rounded-lg bg-gray-50 border border-gray-100">
-                  {customImages[item.product.id] ? (
+                  {(customImages[item.product.id] || item.product.image) ? (
                     <img 
-                      src={customImages[item.product.id]} 
+                      src={customImages[item.product.id] || item.product.image} 
                       alt={item.product.name}
                       className="w-8 h-8 rounded-lg object-cover shrink-0"
+                      onError={(e) => {
+                        e.currentTarget.style.display = 'none';
+                        e.currentTarget.nextElementSibling?.classList.remove('hidden');
+                      }}
                     />
-                  ) : (
-                    <div className={`w-8 h-8 rounded-lg bg-gradient-to-br ${item.product.color} flex items-center justify-center text-sm shrink-0`}>
-                      {item.product.emoji}
-                    </div>
-                  )}
+                  ) : null}
+                  <div className={`${(customImages[item.product.id] || item.product.image) ? 'hidden' : ''} w-8 h-8 rounded-lg bg-gradient-to-br ${item.product.color} flex items-center justify-center text-sm shrink-0`}>
+                    {item.product.emoji}
+                  </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-xs font-bold text-gray-800 truncate">{item.product.name}</p>
                     <p className="text-[10px] text-gray-400">OMR {item.product.price.toFixed(3)}</p>

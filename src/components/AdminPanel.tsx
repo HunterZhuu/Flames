@@ -850,21 +850,24 @@ function MenuManager() {
                     isAvailable ? 'bg-white border-gray-100' : 'bg-gray-50 border-gray-200 opacity-60'
                   }`}>
                     <div className="flex items-center gap-3">
-                      {customImages[item.id] ? (
+                      {(customImages[item.id] || item.image) ? (
                         <img 
-                          src={customImages[item.id]} 
+                          src={customImages[item.id] || item.image} 
                           alt={item.name}
                           className="w-8 h-8 rounded-lg object-cover cursor-pointer hover:opacity-80"
                           onClick={() => setEditingImage(item.id)}
+                          onError={(e) => {
+                            e.currentTarget.style.display = 'none';
+                            e.currentTarget.nextElementSibling?.classList.remove('hidden');
+                          }}
                         />
-                      ) : (
-                        <div 
-                          className={`w-8 h-8 rounded-lg bg-gradient-to-br ${item.color} flex items-center justify-center text-sm cursor-pointer hover:opacity-80`}
-                          onClick={() => setEditingImage(item.id)}
-                        >
-                          {item.emoji}
-                        </div>
-                      )}
+                      ) : null}
+                      <div 
+                        className={`${(customImages[item.id] || item.image) ? 'hidden' : ''} w-8 h-8 rounded-lg bg-gradient-to-br ${item.color} flex items-center justify-center text-sm cursor-pointer hover:opacity-80`}
+                        onClick={() => setEditingImage(item.id)}
+                      >
+                        {item.emoji}
+                      </div>
                       <div>
                         <p className="text-xs font-bold text-gray-800">{item.name}</p>
                         <p className="text-[10px] text-gray-400">OMR {item.price.toFixed(3)}</p>

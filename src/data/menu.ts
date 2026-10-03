@@ -7,7 +7,7 @@ export interface MenuItem {
   emoji: string;
   color: string;
   available: boolean;
-  image?: string; // base64 encoded image (optional)
+  image?: string; // base64 encoded image or URL (optional)
 }
 
 export interface Category {
@@ -56,6 +56,7 @@ export const menuItems: MenuItem[] = [
     emoji: '🍤',
     color: 'from-pink-400 to-pink-600',
     available: true,
+    image: 'https://image.qwenlm.ai/generated-images/2ee85d43-5dae-4c14-b42f-f0b1c642edd7/_result.png',
   },
   {
     id: 'app-02',
@@ -98,6 +99,7 @@ export const menuItems: MenuItem[] = [
     emoji: '📦',
     color: 'from-purple-400 to-purple-600',
     available: true,
+    image: 'https://image.qwenlm.ai/generated-images/36ab76b4-ff2f-4525-8900-4b7bc7132beb/_result.png',
   },
   {
     id: 'gather-02',
@@ -130,6 +132,7 @@ export const menuItems: MenuItem[] = [
     emoji: '🍝',
     color: 'from-pink-300 to-pink-500',
     available: true,
+    image: 'https://image.qwenlm.ai/generated-images/a5541dcf-8ee7-42c4-b41e-ca97b03106ea/_result.png',
   },
   {
     id: 'pasta-03',
@@ -172,6 +175,7 @@ export const menuItems: MenuItem[] = [
     emoji: '🍔',
     color: 'from-red-400 to-red-600',
     available: true,
+    image: 'https://image.qwenlm.ai/generated-images/db27ea65-4b80-4ee0-8cc4-e7ff601a2cd6/_result.png',
   },
   {
     id: 'burger-03',
@@ -192,6 +196,7 @@ export const menuItems: MenuItem[] = [
     emoji: '🍗',
     color: 'from-amber-400 to-amber-600',
     available: true,
+    image: 'https://image.qwenlm.ai/generated-images/08dbd742-f4e4-4643-b7f4-5acbc73737db/_result.png',
   },
   {
     id: 'burger-05',
@@ -264,6 +269,7 @@ export const menuItems: MenuItem[] = [
     emoji: '🥪',
     color: 'from-amber-300 to-amber-500',
     available: true,
+    image: 'https://image.qwenlm.ai/generated-images/c4aff175-4efb-48e3-8edd-7680d9677357/_result.png',
   },
 
   // ===================== SLIDERS =====================
@@ -318,6 +324,7 @@ export const menuItems: MenuItem[] = [
     emoji: '🍢',
     color: 'from-amber-400 to-amber-600',
     available: true,
+    image: 'https://image.qwenlm.ai/generated-images/8406f95f-28ce-4686-ae0c-092f915094a6/_result.png',
   },
 
   // ===================== SALADS =====================
@@ -330,6 +337,7 @@ export const menuItems: MenuItem[] = [
     emoji: '🥗',
     color: 'from-green-300 to-green-500',
     available: true,
+    image: 'https://image.qwenlm.ai/generated-images/4b2f1348-1949-46d4-9d68-249d9bd42e39/_result.png',
   },
   {
     id: 'salad-02',
@@ -352,6 +360,7 @@ export const menuItems: MenuItem[] = [
     emoji: '🍟',
     color: 'from-yellow-300 to-yellow-500',
     available: true,
+    image: 'https://image.qwenlm.ai/generated-images/6293297f-cc59-4a70-9c89-0720df3c2a01/_result.png',
   },
   {
     id: 'fries-02',
@@ -494,6 +503,7 @@ export const menuItems: MenuItem[] = [
     emoji: '🍓',
     color: 'from-red-300 to-pink-400',
     available: true,
+    image: 'https://image.qwenlm.ai/generated-images/8f75e5a0-39dc-4fe8-a6f1-558fb89fc747/_result.png',
   },
 
   // ===================== EXTRAS =====================
