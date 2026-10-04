@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { MenuItem } from '../data/menu';
+import type { MenuItem } from '../data/menu';
 
 // Types
 export interface CartItem {
@@ -16,13 +16,25 @@ export interface Order {
   tax: number;
   total: number;
   paymentMethod: string;
-  cashTendered?: number; // Amount of cash given by customer
-  change?: number; // Change to return to customer
+  cashTendered?: number;
+  change?: number;
   cashier: string;
   timestamp: number;
   orderType: 'dine-in' | 'takeaway' | 'delivery';
   tableNumber?: string;
   status: 'completed' | 'refunded';
+}
+
+export interface StaffPermissions {
+  canProcessOrders: boolean;
+  canRefund: boolean;
+  canViewReports: boolean;
+  canManageStaff: boolean;
+  canEditMenu: boolean;
+  canViewAllOrders: boolean;
+  canPrintReceipts: boolean;
+  canApplyDiscounts: boolean;
+  allowedCategories: string[];
 }
 
 export interface StaffMember {
@@ -35,65 +47,6 @@ export interface StaffMember {
   createdAt: number;
 }
 
-export interface StaffPermissions {
-  canProcessOrders: boolean;
-  canRefund: boolean;
-  canViewReports: boolean;
-  canManageStaff: boolean;
-  canEditMenu: boolean;
-  canViewAllOrders: boolean;
-  canPrintReceipts: boolean;
-  canApplyDiscounts: boolean;
-  allowedCategories: string[]; // Empty array = all categories allowed
-}
-
-export const defaultPermissions: Record<StaffMember['role'], StaffPermissions> = {
-  admin: {
-    canProcessOrders: true,
-    canRefund: true,
-    canViewReports: true,
-    canManageStaff: true,
-    canEditMenu: true,
-    canViewAllOrders: true,
-    canPrintReceipts: true,
-    canApplyDiscounts: true,
-    allowedCategories: [], // Empty = all categories
-  },
-  manager: {
-    canProcessOrders: true,
-    canRefund: true,
-    canViewReports: true,
-    canManageStaff: false,
-    canEditMenu: true,
-    canViewAllOrders: true,
-    canPrintReceipts: true,
-    canApplyDiscounts: true,
-    allowedCategories: [], // Empty = all categories
-  },
-  cashier: {
-    canProcessOrders: true,
-    canRefund: false,
-    canViewReports: false,
-    canManageStaff: false,
-    canEditMenu: false,
-    canViewAllOrders: false,
-    canPrintReceipts: true,
-    canApplyDiscounts: false,
-    allowedCategories: [], // Empty = all categories
-  },
-  kitchen: {
-    canProcessOrders: false,
-    canRefund: false,
-    canViewReports: false,
-    canManageStaff: false,
-    canEditMenu: false,
-    canViewAllOrders: true,
-    canPrintReceipts: false,
-    canApplyDiscounts: false,
-    allowedCategories: [], // Empty = all categories
-  },
-};
-
 export interface EmailConfig {
   enabled: boolean;
   recipientEmail: string;
@@ -104,17 +57,17 @@ export interface EmailConfig {
 }
 
 export interface PrinterConfig {
-  autoPrintReceipt: boolean; // Auto-print customer receipt after order
-  autoPrintKitchen: boolean; // Auto-print kitchen ticket after order
-  printDelay: number; // Delay in ms before printing (gives time to see receipt)
+  autoPrintReceipt: boolean;
+  autoPrintKitchen: boolean;
+  printDelay: number;
 }
 
 export interface PaymentMethod {
   id: string;
   name: string;
-  icon: string; // FontAwesome icon class (e.g. 'fa-money-bill-wave')
+  icon: string;
   enabled: boolean;
-  color: string; // Tailwind color class
+  color: string;
   sortOrder: number;
 }
 
@@ -128,6 +81,13 @@ export interface PendingEmail {
   lastAttempt?: number;
   status: 'pending' | 'sending' | 'sent' | 'failed';
 }
+
+export const defaultPermissions: Record<StaffMember['role'], StaffPermissions> = {
+  admin: { canProcessOrders: true, canRefund: true, canViewReports: true, canManageStaff: true, canEditMenu: true, canViewAllOrders: true, canPrintReceipts: true, canApplyDiscounts: true, allowedCategories: [] },
+  manager: { canProcessOrders: true, canRefund: true, canViewReports: true, canManageStaff: false, canEditMenu: true, canViewAllOrders: true, canPrintReceipts: true, canApplyDiscounts: true, allowedCategories: [] },
+  cashier: { canProcessOrders: true, canRefund: false, canViewReports: false, canManageStaff: false, canEditMenu: false, canViewAllOrders: false, canPrintReceipts: true, canApplyDiscounts: false, allowedCategories: [] },
+  kitchen: { canProcessOrders: false, canRefund: false, canViewReports: false, canManageStaff: false, canEditMenu: false, canViewAllOrders: true, canPrintReceipts: false, canApplyDiscounts: false, allowedCategories: [] },
+};
 
 interface AppState {
   // Auth
@@ -145,44 +105,21 @@ interface AppState {
   // Staff
   staff: StaffMember[];
   
-  // Menu overrides (for availability toggling)
+  // Menu
   menuOverrides: Record<string, boolean>;
+  customMenuItems: MenuItem[];
+  removedMenuItems: string[];
+  customImages: Record<string, string>;
   
   // Email & Sync
   emailConfig: EmailConfig;
   pendingEmails: PendingEmail[];
   
-  // Printer Settings
+  // Printer
   printerConfig: PrinterConfig;
   
-  // Payment Methods
+  // Payment
   paymentMethods: PaymentMethod[];
-  
-  // Custom Menu Images (stored separately to avoid bloating menu data)
-  customImages: Record<string, string>; // itemId -> base64 image
-  
-  // Custom Menu Items (added by admin)
-  customMenuItems: MenuItem[];
-  
-  // Removed Menu Items (hidden by admin)
-  removedMenuItems: string[]; // array of item IDs
-  
-  // Actions
-  updateEmailConfig: (config: Partial<EmailConfig>) => void;
-  updatePrinterConfig: (config: Partial<PrinterConfig>) => void;
-  addPendingEmail: (email: PendingEmail) => void;
-  updatePendingEmail: (id: string, updates: Partial<PendingEmail>) => void;
-  removePendingEmail: (id: string) => void;
-  clearSentEmails: () => void;
-  addPaymentMethod: (method: PaymentMethod) => void;
-  updatePaymentMethod: (id: string, updates: Partial<PaymentMethod>) => void;
-  removePaymentMethod: (id: string) => void;
-  togglePaymentMethod: (id: string) => void;
-  setCustomImage: (itemId: string, imageBase64: string) => void;
-  removeCustomImage: (itemId: string) => void;
-  addMenuItem: (item: MenuItem) => void;
-  removeMenuItem: (itemId: string) => void;
-  restoreMenuItem: (itemId: string) => void;
   
   // Actions
   login: (pin: string) => boolean;
@@ -199,13 +136,27 @@ interface AppState {
   updateStaff: (id: string, updates: Partial<StaffMember>) => void;
   removeStaff: (id: string) => void;
   toggleMenuItem: (itemId: string) => void;
+  addMenuItem: (item: MenuItem) => void;
+  removeMenuItem: (itemId: string) => void;
+  restoreMenuItem: (itemId: string) => void;
+  setCustomImage: (itemId: string, imageBase64: string) => void;
+  removeCustomImage: (itemId: string) => void;
+  updateEmailConfig: (config: Partial<EmailConfig>) => void;
+  updatePrinterConfig: (config: Partial<PrinterConfig>) => void;
+  addPendingEmail: (email: PendingEmail) => void;
+  updatePendingEmail: (id: string, updates: Partial<PendingEmail>) => void;
+  removePendingEmail: (id: string) => void;
+  clearSentEmails: () => void;
+  addPaymentMethod: (method: PaymentMethod) => void;
+  updatePaymentMethod: (id: string, updates: Partial<PaymentMethod>) => void;
+  removePaymentMethod: (id: string) => void;
+  togglePaymentMethod: (id: string) => void;
+  resetData: () => void;
   getCartSubtotal: () => number;
   getCartTax: () => number;
   getCartTotal: () => number;
-  resetData: () => void;
 }
 
-// Default admin account
 const defaultAdmin: StaffMember = {
   id: 'admin-001',
   name: 'Admin',
@@ -227,6 +178,9 @@ export const useStore = create<AppState>()(
       orders: [],
       staff: [defaultAdmin],
       menuOverrides: {},
+      customMenuItems: [],
+      removedMenuItems: [],
+      customImages: {},
       emailConfig: {
         enabled: false,
         recipientEmail: '',
@@ -248,13 +202,9 @@ export const useStore = create<AppState>()(
         { id: 'googlepay', name: 'Google Pay', icon: 'fa-google', enabled: true, color: 'yellow', sortOrder: 4 },
         { id: 'thawani', name: 'Thawani', icon: 'fa-wallet', enabled: true, color: 'purple', sortOrder: 5 },
       ],
-      customImages: {},
-      customMenuItems: [],
-      removedMenuItems: [],
 
       login: (pin: string) => {
-        const state = get();
-        const user = state.staff.find(s => s.pin === pin && s.active);
+        const user = get().staff.find(s => s.pin === pin && s.active);
         if (user) {
           set({ currentUser: user, isLoggedIn: true });
           return true;
@@ -267,16 +217,11 @@ export const useStore = create<AppState>()(
       },
 
       addToCart: (item: MenuItem) => {
-        const state = get();
-        const existing = state.cart.find(c => c.product.id === item.id);
+        const existing = get().cart.find(c => c.product.id === item.id);
         if (existing) {
-          set({
-            cart: state.cart.map(c =>
-              c.product.id === item.id ? { ...c, quantity: c.quantity + 1 } : c
-            ),
-          });
+          set({ cart: get().cart.map(c => c.product.id === item.id ? { ...c, quantity: c.quantity + 1 } : c) });
         } else {
-          set({ cart: [...state.cart, { product: item, quantity: 1 }] });
+          set({ cart: [...get().cart, { product: item, quantity: 1 }] });
         }
       },
 
@@ -288,16 +233,11 @@ export const useStore = create<AppState>()(
         if (qty <= 0) {
           set({ cart: get().cart.filter(c => c.product.id !== itemId) });
         } else {
-          set({
-            cart: get().cart.map(c =>
-              c.product.id === itemId ? { ...c, quantity: qty } : c
-            ),
-          });
+          set({ cart: get().cart.map(c => c.product.id === itemId ? { ...c, quantity: qty } : c) });
         }
       },
 
       clearCart: () => set({ cart: [] }),
-
       setOrderType: (type) => set({ orderType: type }),
       setTableNumber: (num) => set({ tableNumber: num }),
 
@@ -310,10 +250,7 @@ export const useStore = create<AppState>()(
         const order: Order = {
           id: `FLM-${Date.now().toString(36).toUpperCase()}`,
           items: [...state.cart],
-          subtotal,
-          tax,
-          total,
-          paymentMethod,
+          subtotal, tax, total, paymentMethod,
           cashTendered: paymentMethod === 'cash' ? cashTendered : undefined,
           change: paymentMethod === 'cash' && change ? change : undefined,
           cashier: state.currentUser?.name || 'Unknown',
@@ -323,149 +260,71 @@ export const useStore = create<AppState>()(
           status: 'completed',
         };
 
-        set({
-          orders: [order, ...state.orders],
-          cart: [],
-          tableNumber: '',
-        });
-
+        set({ orders: [order, ...state.orders], cart: [], tableNumber: '' });
         return order;
       },
 
       refundOrder: (orderId: string) => {
-        set({
-          orders: get().orders.map(o =>
-            o.id === orderId ? { ...o, status: 'refunded' as const } : o
-          ),
-        });
+        set({ orders: get().orders.map(o => o.id === orderId ? { ...o, status: 'refunded' as const } : o) });
       },
 
       addStaff: (member) => {
-        const newMember: StaffMember = {
-          ...member,
-          id: `staff-${Date.now()}`,
-          createdAt: Date.now(),
-        };
-        set({ staff: [...get().staff, newMember] });
+        set({ staff: [...get().staff, { ...member, id: `staff-${Date.now()}`, createdAt: Date.now() }] });
       },
 
-      updateStaff: (id: string, updates: Partial<StaffMember>) => {
-        set({
-          staff: get().staff.map(s => s.id === id ? { ...s, ...updates } : s),
-        });
+      updateStaff: (id, updates) => {
+        set({ staff: get().staff.map(s => s.id === id ? { ...s, ...updates } : s) });
       },
 
-      removeStaff: (id: string) => {
+      removeStaff: (id) => {
         set({ staff: get().staff.filter(s => s.id !== id) });
       },
 
-      toggleMenuItem: (itemId: string) => {
+      toggleMenuItem: (itemId) => {
         const overrides = { ...get().menuOverrides };
         overrides[itemId] = !overrides[itemId];
         set({ menuOverrides: overrides });
       },
 
-      updateEmailConfig: (config: Partial<EmailConfig>) => {
-        set({ emailConfig: { ...get().emailConfig, ...config } });
+      addMenuItem: (item) => set({ customMenuItems: [...get().customMenuItems, item] }),
+      removeMenuItem: (itemId) => set({ removedMenuItems: [...get().removedMenuItems, itemId] }),
+      restoreMenuItem: (itemId) => set({ removedMenuItems: get().removedMenuItems.filter(id => id !== itemId) }),
+
+      setCustomImage: (itemId, imageBase64) => {
+        set({ customImages: { ...get().customImages, [itemId]: imageBase64 } });
       },
 
-      updatePrinterConfig: (config: Partial<PrinterConfig>) => {
-        set({ printerConfig: { ...get().printerConfig, ...config } });
-      },
-
-      addPendingEmail: (email: PendingEmail) => {
-        set({ pendingEmails: [...get().pendingEmails, email] });
-      },
-
-      updatePendingEmail: (id: string, updates: Partial<PendingEmail>) => {
-        set({
-          pendingEmails: get().pendingEmails.map(e =>
-            e.id === id ? { ...e, ...updates } : e
-          ),
-        });
-      },
-
-      removePendingEmail: (id: string) => {
-        set({ pendingEmails: get().pendingEmails.filter(e => e.id !== id) });
-      },
-
-      clearSentEmails: () => {
-        set({ pendingEmails: get().pendingEmails.filter(e => e.status !== 'sent') });
-      },
-
-      addPaymentMethod: (method: PaymentMethod) => {
-        set({ paymentMethods: [...get().paymentMethods, method] });
-      },
-
-      updatePaymentMethod: (id: string, updates: Partial<PaymentMethod>) => {
-        set({
-          paymentMethods: get().paymentMethods.map(pm =>
-            pm.id === id ? { ...pm, ...updates } : pm
-          ),
-        });
-      },
-
-      removePaymentMethod: (id: string) => {
-        set({ paymentMethods: get().paymentMethods.filter(pm => pm.id !== id) });
-      },
-
-      togglePaymentMethod: (id: string) => {
-        set({
-          paymentMethods: get().paymentMethods.map(pm =>
-            pm.id === id ? { ...pm, enabled: !pm.enabled } : pm
-          ),
-        });
-      },
-
-      setCustomImage: (itemId: string, imageBase64: string) => {
-        set({
-          customImages: { ...get().customImages, [itemId]: imageBase64 },
-        });
-      },
-
-      removeCustomImage: (itemId: string) => {
+      removeCustomImage: (itemId) => {
         const { [itemId]: _, ...rest } = get().customImages;
         set({ customImages: rest });
       },
 
-      addMenuItem: (item: MenuItem) => {
-        set({ customMenuItems: [...get().customMenuItems, item] });
-      },
+      updateEmailConfig: (config) => set({ emailConfig: { ...get().emailConfig, ...config } }),
+      updatePrinterConfig: (config) => set({ printerConfig: { ...get().printerConfig, ...config } }),
 
-      removeMenuItem: (itemId: string) => {
-        set({ removedMenuItems: [...get().removedMenuItems, itemId] });
+      addPendingEmail: (email) => set({ pendingEmails: [...get().pendingEmails, email] }),
+      updatePendingEmail: (id, updates) => {
+        set({ pendingEmails: get().pendingEmails.map(e => e.id === id ? { ...e, ...updates } : e) });
       },
+      removePendingEmail: (id) => set({ pendingEmails: get().pendingEmails.filter(e => e.id !== id) }),
+      clearSentEmails: () => set({ pendingEmails: get().pendingEmails.filter(e => e.status !== 'sent') }),
 
-      restoreMenuItem: (itemId: string) => {
-        set({ removedMenuItems: get().removedMenuItems.filter(id => id !== itemId) });
+      addPaymentMethod: (method) => set({ paymentMethods: [...get().paymentMethods, method] }),
+      updatePaymentMethod: (id, updates) => {
+        set({ paymentMethods: get().paymentMethods.map(pm => pm.id === id ? { ...pm, ...updates } : pm) });
       },
-
-      getCartSubtotal: () => {
-        return get().cart.reduce((sum, item) => sum + item.product.price * item.quantity, 0);
-      },
-
-      getCartTax: () => {
-        return get().getCartSubtotal() * 0.05; // 5% VAT in Oman
-      },
-
-      getCartTotal: () => {
-        return get().getCartSubtotal() + get().getCartTax();
+      removePaymentMethod: (id) => set({ paymentMethods: get().paymentMethods.filter(pm => pm.id !== id) }),
+      togglePaymentMethod: (id) => {
+        set({ paymentMethods: get().paymentMethods.map(pm => pm.id === id ? { ...pm, enabled: !pm.enabled } : pm) });
       },
 
       resetData: () => {
-        console.log('Store: Resetting all data...');
-        // Clear all data from state
-        set({
-          orders: [],
-          pendingEmails: [],
-          customImages: {},
-          customMenuItems: [],
-          removedMenuItems: [],
-          menuOverrides: {},
-          cart: [],
-        });
-        console.log('Store: Data reset complete');
+        set({ orders: [], pendingEmails: [], customImages: {}, customMenuItems: [], removedMenuItems: [], menuOverrides: {}, cart: [] });
       },
+
+      getCartSubtotal: () => get().cart.reduce((sum, item) => sum + item.product.price * item.quantity, 0),
+      getCartTax: () => get().getCartSubtotal() * 0.05,
+      getCartTotal: () => get().getCartSubtotal() + get().getCartTax(),
     }),
     {
       name: 'flames-epos-storage',
