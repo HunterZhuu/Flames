@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useStore } from '../store/store';
 import { getEffectiveMenu, categories } from '../data/menu';
 import { printReceipt, queueEmailForOrder } from '../utils/syncService';
+import CustomerDisplay from './CustomerDisplay';
 import toast from 'react-hot-toast';
 
 export default function POSScreen() {
@@ -21,6 +22,7 @@ export default function POSScreen() {
   const [cashAmount, setCashAmount] = useState('');
   const [lastOrder, setLastOrder] = useState<any>(null);
   const [showReceipt, setShowReceipt] = useState(false);
+  const [showCustomerDisplay, setShowCustomerDisplay] = useState(false);
 
   const effectiveMenu = getEffectiveMenu(customMenuItems, removedMenuItems);
   
@@ -99,6 +101,13 @@ export default function POSScreen() {
                 className="w-full pl-8 pr-3 py-2 rounded-lg border border-gray-200 focus:border-orange-400 focus:ring-2 focus:ring-orange-100 outline-none text-sm"
               />
             </div>
+            <button
+              onClick={() => setShowCustomerDisplay(true)}
+              className="px-4 py-2 rounded-lg bg-gradient-to-r from-purple-500 to-pink-500 text-white text-xs font-bold shadow-md hover:shadow-lg transition-all"
+              title="Customer Display Mode"
+            >
+              <i className="fas fa-tv mr-1"></i> Display
+            </button>
           </div>
           
           {/* Order Type */}
@@ -524,6 +533,11 @@ export default function POSScreen() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Customer Display */}
+      {showCustomerDisplay && (
+        <CustomerDisplay onClose={() => setShowCustomerDisplay(false)} />
       )}
     </div>
   );
