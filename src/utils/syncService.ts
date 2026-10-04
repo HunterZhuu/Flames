@@ -139,7 +139,7 @@ export function generateKitchenTicket(order: Order): string {
   return ticket;
 }
 
-export function printReceipt(order: Order, type: 'customer' | 'kitchen' = 'customer') {
+export function printReceipt(order: Order, type: 'customer' | 'kitchen' = 'customer'): boolean {
   const branchInfo = { name: 'FLAMES BURGERS & MORE', address: 'Barka, Oman', phone: '92809445' };
 
   let content: string;
@@ -150,14 +150,106 @@ export function printReceipt(order: Order, type: 'customer' | 'kitchen' = 'custo
     content = generateReceiptHTML(order, branchInfo);
   }
 
-  const printWindow = window.open('', '_blank', 'width=400,height=600');
-  if (printWindow) {
-    printWindow.document.write(`<html><head><title>Receipt - ${order.id}</title><style>@page { margin: 5mm; size: 80mm auto; } body { margin: 0; padding: 0; } @media print { body { margin: 0; } }</style></head><body>${content}</body></html>`);
+  try {
+    const printWindow = window.open('', '_blank', 'width=400,height=600');
+    if (!printWindow) {
+      console.error('Could not open print window. Please allow popups for this site.');
+      return false;
+    }
+
+    const printStyles = `
+      @page { 
+        margin: 5mm; 
+        size: 80mm auto; 
+      }
+      body { 
+        margin: 0; 
+        padding: 0; 
+        font-family: 'Courier New', monospace;
+      }
+      @media print { 
+        body { margin: 0; }
+        * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+      }
+    `;
+
+    printWindow.document.write(`
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <title>Receipt - ${order.id}</title>
+          <style>${printStyles}</style>
+        </head>
+        <body>${content}</body>
+      </html>
+    `);
     printWindow.document.close();
+    
+    // Wait for content to load, then print
     setTimeout(() => {
       printWindow.focus();
       printWindow.print();
-    }, 250);
+    }, 500);
+
+    return true;
+  } catch (error) {
+    console.error('Print error:', error);
+    return false;
+  }
+}
+
+export function testPrint(): boolean {
+  try {
+    const testWindow = window.open('', '_blank', 'width=400,height=600');
+    if (!testWindow) {
+      console.error('Could not open test print window. Please allow popups for this site.');
+      return false;
+    }
+
+    const testContent = `
+      <div style="max-width: 300px; margin: 20px auto; font-family: 'Courier New', monospace;">
+        <div style="text-align: center; border-bottom: 2px dashed #000; padding-bottom: 10px; margin-bottom: 10px;">
+          <h2 style="margin: 0;">🔥 TEST PRINT</h2>
+          <p style="margin: 5px 0; font-size: 12px;">FLAMES BURGERS & MORE</p>
+        </div>
+        <p style="text-align: center; font-size: 14px; margin: 20px 0;">
+          ✓ Printer test successful!<br>
+          ✓ Print function is working<br>
+          ✓ Receipt formatting is correct
+        </p>
+        <div style="border-top: 2px dashed #000; padding-top: 10px; margin-top: 10px; text-align: center;">
+          <p style="margin: 0; font-size: 10px;">Test completed at ${new Date().toLocaleString()}</p>
+        </div>
+      </div>
+    `;
+
+    const printStyles = `
+      @page { margin: 5mm; size: 80mm auto; }
+      body { margin: 0; padding: 0; font-family: 'Courier New', monospace; }
+      @media print { body { margin: 0; } }
+    `;
+
+    testWindow.document.write(`
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <title>Test Print</title>
+          <style>${printStyles}</style>
+        </head>
+        <body>${testContent}</body>
+      </html>
+    `);
+    testWindow.document.close();
+    
+    setTimeout(() => {
+      testWindow.focus();
+      testWindow.print();
+    }, 500);
+
+    return true;
+  } catch (error) {
+    console.error('Test print error:', error);
+    return false;
   }
 }
 

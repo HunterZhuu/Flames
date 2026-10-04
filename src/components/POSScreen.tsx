@@ -78,9 +78,17 @@ export default function POSScreen() {
     const { printerConfig } = useStore.getState();
     if (printerConfig.autoPrintReceipt) {
       setTimeout(() => {
-        printReceipt(order, 'customer');
+        const success = printReceipt(order, 'customer');
+        if (success) {
+          toast.success('Auto-printing customer receipt...', { icon: '🖨️', duration: 2000 });
+        }
         if (printerConfig.autoPrintKitchen) {
-          setTimeout(() => printReceipt(order, 'kitchen'), 500);
+          setTimeout(() => {
+            const kitchenSuccess = printReceipt(order, 'kitchen');
+            if (kitchenSuccess) {
+              toast.success('Auto-printing kitchen ticket...', { icon: '🖨️', duration: 2000 });
+            }
+          }, 500);
         }
       }, printerConfig.printDelay);
     }
@@ -295,8 +303,26 @@ export default function POSScreen() {
             </div>
             <div className="p-4 border-t border-gray-100 space-y-2">
               <div className="grid grid-cols-2 gap-2">
-                <button onClick={() => printReceipt(lastOrder, 'customer')} className="py-2.5 rounded-xl bg-blue-600 text-white font-bold text-xs shadow-md hover:shadow-lg transition-all"><i className="fas fa-print mr-1"></i> Customer Receipt</button>
-                <button onClick={() => printReceipt(lastOrder, 'kitchen')} className="py-2.5 rounded-xl bg-amber-600 text-white font-bold text-xs shadow-md hover:shadow-lg transition-all"><i className="fas fa-utensils mr-1"></i> Kitchen Copy</button>
+                <button onClick={() => {
+                  const success = printReceipt(lastOrder, 'customer');
+                  if (success) {
+                    toast.success('Customer receipt sent to printer!', { icon: '🖨️' });
+                  } else {
+                    toast.error('Print failed. Please allow popups for this site.');
+                  }
+                }} className="py-2.5 rounded-xl bg-blue-600 text-white font-bold text-xs shadow-md hover:shadow-lg transition-all">
+                  <i className="fas fa-print mr-1"></i> Customer Receipt
+                </button>
+                <button onClick={() => {
+                  const success = printReceipt(lastOrder, 'kitchen');
+                  if (success) {
+                    toast.success('Kitchen ticket sent to printer!', { icon: '🖨️' });
+                  } else {
+                    toast.error('Print failed. Please allow popups for this site.');
+                  }
+                }} className="py-2.5 rounded-xl bg-amber-600 text-white font-bold text-xs shadow-md hover:shadow-lg transition-all">
+                  <i className="fas fa-utensils mr-1"></i> Kitchen Copy
+                </button>
               </div>
               <button onClick={() => {
                 const pending = queueEmailForOrder(lastOrder);

@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useStore, defaultPermissions, type StaffMember, type StaffPermissions } from '../store/store';
 import { getEffectiveMenu, categories, type MenuItem } from '../data/menu';
-import { syncPendingEmails, printReceipt, queueEmailForOrder } from '../utils/syncService';
+import { syncPendingEmails, printReceipt, queueEmailForOrder, testPrint } from '../utils/syncService';
 import { compressImage } from '../utils/imageUtils';
 import toast from 'react-hot-toast';
 
@@ -341,12 +341,28 @@ function OrderHistory() {
                 <p className="text-xs text-gray-500 mt-2">Total Amount</p><p className="text-sm font-bold text-orange-600">OMR {order.total.toFixed(3)}</p>
               </div>
               <div className="space-y-2">
-                <button onClick={() => { printReceipt(order, 'customer'); setShowPrintOptions(null); toast.success('Customer receipt sent to printer'); }} className="w-full flex items-center gap-3 p-3 rounded-lg border-2 border-gray-200 hover:border-blue-500 hover:bg-blue-50 transition-all text-left">
+                <button onClick={() => { 
+                  const success = printReceipt(order, 'customer');
+                  setShowPrintOptions(null);
+                  if (success) {
+                    toast.success('Customer receipt sent to printer!', { icon: '🖨️' });
+                  } else {
+                    toast.error('Print failed. Please allow popups for this site.');
+                  }
+                }} className="w-full flex items-center gap-3 p-3 rounded-lg border-2 border-gray-200 hover:border-blue-500 hover:bg-blue-50 transition-all text-left">
                   <div className="w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center"><i className="fas fa-receipt text-blue-600"></i></div>
                   <div className="flex-1"><p className="text-sm font-bold text-gray-800">Customer Receipt</p><p className="text-xs text-gray-500">Full receipt with payment details</p></div>
                   <i className="fas fa-chevron-right text-gray-400"></i>
                 </button>
-                <button onClick={() => { printReceipt(order, 'kitchen'); setShowPrintOptions(null); toast.success('Kitchen ticket sent to printer'); }} className="w-full flex items-center gap-3 p-3 rounded-lg border-2 border-gray-200 hover:border-amber-500 hover:bg-amber-50 transition-all text-left">
+                <button onClick={() => { 
+                  const success = printReceipt(order, 'kitchen');
+                  setShowPrintOptions(null);
+                  if (success) {
+                    toast.success('Kitchen ticket sent to printer!', { icon: '🖨️' });
+                  } else {
+                    toast.error('Print failed. Please allow popups for this site.');
+                  }
+                }} className="w-full flex items-center gap-3 p-3 rounded-lg border-2 border-gray-200 hover:border-amber-500 hover:bg-amber-50 transition-all text-left">
                   <div className="w-10 h-10 rounded-lg bg-amber-100 flex items-center justify-center"><i className="fas fa-utensils text-amber-600"></i></div>
                   <div className="flex-1"><p className="text-sm font-bold text-gray-800">Kitchen Copy</p><p className="text-xs text-gray-500">Order details for kitchen staff</p></div>
                   <i className="fas fa-chevron-right text-gray-400"></i>
@@ -356,7 +372,18 @@ function OrderHistory() {
                   <div className="flex-1"><p className="text-sm font-bold text-gray-800">Email Receipt</p><p className="text-xs text-gray-500">Send receipt via email</p></div>
                   <i className="fas fa-chevron-right text-gray-400"></i>
                 </button>
-                <button onClick={() => { printReceipt(order, 'customer'); setTimeout(() => printReceipt(order, 'kitchen'), 500); setShowPrintOptions(null); toast.success('Both receipts sent to printer'); }} className="w-full flex items-center gap-3 p-3 rounded-lg border-2 border-gray-200 hover:border-green-500 hover:bg-green-50 transition-all text-left">
+                <button onClick={() => { 
+                  const success1 = printReceipt(order, 'customer');
+                  setTimeout(() => {
+                    const success2 = printReceipt(order, 'kitchen');
+                    if (success1 && success2) {
+                      toast.success('Both receipts sent to printer!', { icon: '🖨️' });
+                    } else {
+                      toast.error('Print failed. Please allow popups for this site.');
+                    }
+                  }, 500);
+                  setShowPrintOptions(null);
+                }} className="w-full flex items-center gap-3 p-3 rounded-lg border-2 border-gray-200 hover:border-green-500 hover:bg-green-50 transition-all text-left">
                   <div className="w-10 h-10 rounded-lg bg-green-100 flex items-center justify-center"><i className="fas fa-print text-green-600"></i></div>
                   <div className="flex-1"><p className="text-sm font-bold text-gray-800">Print Both</p><p className="text-xs text-gray-500">Customer receipt + Kitchen copy</p></div>
                   <i className="fas fa-chevron-right text-gray-400"></i>
@@ -638,6 +665,19 @@ function SettingsPanel() {
           <input type="number" min="0" max="10" step="0.5" value={localPrinterConfig.printDelay / 1000} onChange={(e) => { const newValue = Math.max(0, Math.min(10, parseFloat(e.target.value) || 0)) * 1000; setLocalPrinterConfig({ ...localPrinterConfig, printDelay: newValue }); updatePrinterConfig({ printDelay: newValue }); }} className="w-full px-3 py-2 rounded-lg border border-gray-200 focus:border-blue-400 focus:ring-2 focus:ring-blue-100 outline-none text-sm" />
           <p className="text-[10px] text-gray-400 mt-1">Delay before auto-printing (gives time to view receipt)</p>
         </div>
+        <button 
+          onClick={() => {
+            const success = testPrint();
+            if (success) {
+              toast.success('Test print sent! Check your printer.');
+            } else {
+              toast.error('Print failed. Please allow popups for this site.');
+            }
+          }} 
+          className="w-full py-2.5 rounded-xl bg-gradient-to-r from-green-500 to-green-600 text-white font-bold text-sm shadow-md hover:shadow-lg transition-all"
+        >
+          <i className="fas fa-print mr-2"></i> Test Print
+        </button>
         <div className="p-3 rounded-lg bg-blue-50 border border-blue-200">
           <div className="flex items-start gap-2">
             <i className="fas fa-info-circle text-blue-500 mt-0.5"></i>
