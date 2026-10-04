@@ -834,7 +834,7 @@ function MenuManager() {
           <option value="gathering">Gathering Box</option>
           <option value="drinks">Drinks</option>
           <option value="extras">Extras</option>
-          <option value="gutech">GUTECH EVENT MENU</option>
+          <option value="gutech">GUTech Event</option>
         </select>
       </div>
 
