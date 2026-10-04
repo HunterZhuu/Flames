@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { menuItems } from '../data/menu';
+import { getEffectiveMenu } from '../data/menu';
 import { useStore } from '../store/store';
 import toast from 'react-hot-toast';
 
@@ -12,10 +12,11 @@ export default function CustomerDisplay({ onClose }: CustomerDisplayProps) {
   const [selectedItem, setSelectedItem] = useState<string | null>(null);
   const [slideshowIndex, setSlideshowIndex] = useState(0);
   const [isAutoPlay, setIsAutoPlay] = useState(true);
-  const { customImages, addToCart, cart } = useStore();
+  const { customImages, addToCart, cart, customMenuItems, removedMenuItems } = useStore();
 
-  // Filter only GUTech items
-  const gutechItems = menuItems.filter(item => item.category === 'gutech');
+  // Get effective menu and filter only GUTech items
+  const effectiveMenu = getEffectiveMenu(customMenuItems, removedMenuItems);
+  const gutechItems = effectiveMenu.filter(item => item.category === 'gutech');
 
   // Auto slideshow
   useEffect(() => {
@@ -96,7 +97,7 @@ export default function CustomerDisplay({ onClose }: CustomerDisplayProps) {
           // Grid View - Bigger pictures layout
           <div className="h-full overflow-y-auto">
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 p-5">
-              {gutechItems.map((item) => {
+              {gutechItems.map((item: any) => {
                 const isSelected = selectedItem === item.id;
                 const inCart = cart.find(c => c.product.id === item.id);
                 return (
@@ -282,11 +283,10 @@ export default function CustomerDisplay({ onClose }: CustomerDisplayProps) {
 
             {/* Slide Indicators - Bottom Center */}
             <div className="absolute bottom-24 left-1/2 -translate-x-1/2 flex gap-2 z-10">
-              {gutechItems.map((_, index) => (
-                <button
-                  key={index}
-                  onClick={() => setSlideshowIndex(index)}
-                  className={`h-2 rounded-full transition-all ${
+              {gutechItems.map((_: any, index: number) => (
+                  <button
+                    key={index}
+                    onClick={() => setSlideshowIndex(index)}                  className={`h-2 rounded-full transition-all ${
                     index === slideshowIndex
                       ? 'w-16 bg-orange-500'
                       : 'w-3 bg-white/40 hover:bg-white/60'
