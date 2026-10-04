@@ -423,6 +423,40 @@ export const useStore = create<AppState>()(
     }),
     {
       name: 'flames-epos-storage',
+      version: 2, // Increment version for migration
+      migrate: (persistedState: any, version: number) => {
+        // Migration from version 0/1 to version 2
+        if (version < 2) {
+          // Ensure printerConfig has required fields
+          if (persistedState.printerConfig) {
+            if (!persistedState.printerConfig.networkConfig) {
+              persistedState.printerConfig.networkConfig = {
+                ipadIP: '192.168.8.100',
+                subnetMask: '255.255.255.0',
+                gateway: '192.168.8.1',
+              };
+            }
+            if (!persistedState.printerConfig.printers) {
+              persistedState.printerConfig.printers = [
+                {
+                  id: 'epson-m362a',
+                  name: 'EPSON TM-m30II (M362A)',
+                  type: 'thermal',
+                  model: 'TM-m30II',
+                  connectionType: 'lan',
+                  ipAddress: '192.168.8.108',
+                  port: 9100,
+                  subnetMask: '255.255.255.0',
+                  gateway: '192.168.8.1',
+                  enabled: true,
+                  isDefault: true,
+                },
+              ];
+            }
+          }
+        }
+        return persistedState as AppState;
+      },
       partialize: (state) => ({
         orders: state.orders,
         staff: state.staff,

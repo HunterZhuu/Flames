@@ -13,6 +13,16 @@ export default function PrinterSettings() {
     updateNetworkConfig 
   } = useStore();
   
+  // Ensure networkConfig exists (migration for old data)
+  const networkConfig = printerConfig.networkConfig || {
+    ipadIP: '192.168.8.100',
+    subnetMask: '255.255.255.0',
+    gateway: '192.168.8.1',
+  };
+  
+  // Ensure printers array exists (migration for old data)
+  const printers = printerConfig.printers || [];
+  
   const [showAddPrinter, setShowAddPrinter] = useState(false);
   const [editingPrinter, setEditingPrinter] = useState<PrinterDevice | null>(null);
   const [formData, setFormData] = useState<Partial<PrinterDevice>>({
@@ -112,7 +122,7 @@ export default function PrinterSettings() {
             <label className="text-xs font-bold text-gray-700 mb-1 block">iPad IP Address</label>
             <input
               type="text"
-              value={printerConfig.networkConfig.ipadIP}
+              value={networkConfig.ipadIP}
               onChange={(e) => updateNetworkConfig({ ipadIP: e.target.value })}
               placeholder="192.168.8.100"
               className="w-full px-3 py-2 rounded-lg border border-gray-200 focus:border-blue-400 focus:ring-2 focus:ring-blue-100 outline-none text-sm"
@@ -122,7 +132,7 @@ export default function PrinterSettings() {
             <label className="text-xs font-bold text-gray-700 mb-1 block">Subnet Mask</label>
             <input
               type="text"
-              value={printerConfig.networkConfig.subnetMask}
+              value={networkConfig.subnetMask}
               onChange={(e) => updateNetworkConfig({ subnetMask: e.target.value })}
               placeholder="255.255.255.0"
               className="w-full px-3 py-2 rounded-lg border border-gray-200 focus:border-blue-400 focus:ring-2 focus:ring-blue-100 outline-none text-sm"
@@ -132,7 +142,7 @@ export default function PrinterSettings() {
             <label className="text-xs font-bold text-gray-700 mb-1 block">Gateway</label>
             <input
               type="text"
-              value={printerConfig.networkConfig.gateway}
+              value={networkConfig.gateway}
               onChange={(e) => updateNetworkConfig({ gateway: e.target.value })}
               placeholder="192.168.8.1"
               className="w-full px-3 py-2 rounded-lg border border-gray-200 focus:border-blue-400 focus:ring-2 focus:ring-blue-100 outline-none text-sm"
@@ -161,7 +171,7 @@ export default function PrinterSettings() {
         <div className="flex items-center justify-between mb-3">
           <h3 className="font-bold text-sm text-gray-800 flex items-center gap-2">
             <i className="fas fa-print text-green-500"></i>
-            Configured Printers ({printerConfig.printers.length})
+            Configured Printers ({printers.length})
           </h3>
           <button
             onClick={() => setShowAddPrinter(true)}
@@ -171,7 +181,7 @@ export default function PrinterSettings() {
           </button>
         </div>
 
-        {printerConfig.printers.length === 0 ? (
+        {printers.length === 0 ? (
           <div className="text-center py-8 text-gray-400">
             <i className="fas fa-print text-4xl mb-3"></i>
             <p className="text-sm">No printers configured</p>
@@ -179,7 +189,7 @@ export default function PrinterSettings() {
           </div>
         ) : (
           <div className="space-y-2">
-            {printerConfig.printers.map(printer => (
+            {printers.map(printer => (
               <div key={printer.id} className={`p-3 rounded-lg border ${printer.isDefault ? 'border-green-300 bg-green-50' : 'border-gray-200 bg-gray-50'}`}>
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
