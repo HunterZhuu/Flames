@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { MenuItem, EventItem } from '../data/menu';
+import { MenuItem } from '../data/menu';
 
 // Types
 export interface CartItem {
@@ -158,9 +158,6 @@ interface AppState {
   // Removed Menu Items (hidden by admin)
   removedMenuItems: string[]; // array of item IDs
   
-  // Event Items (special packages for events)
-  eventItems: EventItem[];
-  
   // Actions
   updateEmailConfig: (config: Partial<EmailConfig>) => void;
   addPendingEmail: (email: PendingEmail) => void;
@@ -176,10 +173,6 @@ interface AppState {
   addMenuItem: (item: MenuItem) => void;
   removeMenuItem: (itemId: string) => void;
   restoreMenuItem: (itemId: string) => void;
-  addEventItem: (item: EventItem) => void;
-  updateEventItem: (id: string, updates: Partial<EventItem>) => void;
-  removeEventItem: (id: string) => void;
-  toggleEventItem: (id: string) => void;
   
   // Actions
   login: (pin: string) => boolean;
@@ -243,7 +236,6 @@ export const useStore = create<AppState>()(
       customImages: {},
       customMenuItems: [],
       removedMenuItems: [],
-      eventItems: [],
 
       login: (pin: string) => {
         const state = get();
@@ -429,30 +421,6 @@ export const useStore = create<AppState>()(
         set({ removedMenuItems: get().removedMenuItems.filter(id => id !== itemId) });
       },
 
-      addEventItem: (item: EventItem) => {
-        set({ eventItems: [...get().eventItems, item] });
-      },
-
-      updateEventItem: (id: string, updates: Partial<EventItem>) => {
-        set({
-          eventItems: get().eventItems.map(e =>
-            e.id === id ? { ...e, ...updates } : e
-          ),
-        });
-      },
-
-      removeEventItem: (id: string) => {
-        set({ eventItems: get().eventItems.filter(e => e.id !== id) });
-      },
-
-      toggleEventItem: (id: string) => {
-        set({
-          eventItems: get().eventItems.map(e =>
-            e.id === id ? { ...e, available: !e.available } : e
-          ),
-        });
-      },
-
       getCartSubtotal: () => {
         return get().cart.reduce((sum, item) => sum + item.product.price * item.quantity, 0);
       },
@@ -492,7 +460,6 @@ export const useStore = create<AppState>()(
         customImages: state.customImages,
         customMenuItems: state.customMenuItems,
         removedMenuItems: state.removedMenuItems,
-        eventItems: state.eventItems,
       }),
     }
   )

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useStore } from '../store/store';
-import { getEffectiveMenu, categories, eventCategories } from '../data/menu';
+import { getEffectiveMenu, categories } from '../data/menu';
 import { printReceipt, queueEmailForOrder } from '../utils/syncService';
 import toast from 'react-hot-toast';
 
@@ -10,7 +10,7 @@ export default function POSScreen() {
     orderType, setOrderType, tableNumber, setTableNumber,
     completeOrder, getCartSubtotal, getCartTax, getCartTotal,
     currentUser, menuOverrides, paymentMethods, customImages,
-    customMenuItems, removedMenuItems, eventItems,
+    customMenuItems, removedMenuItems,
   } = useStore();
 
   const [activeCategory, setActiveCategory] = useState('all');
@@ -31,21 +31,12 @@ export default function POSScreen() {
     if (userAllowedCategories.length === 0) return true;
     return userAllowedCategories.includes(item.category);
   });
-
-  // Filter events based on availability
-  const availableEvents = eventItems.filter(e => e.available);
   
   const filteredItems = menuWithPermissions.filter(item => {
     const isAvailable = menuOverrides[item.id] === undefined ? item.available : !menuOverrides[item.id];
     const matchesCategory = activeCategory === 'all' || item.category === activeCategory;
     const matchesSearch = item.name.toLowerCase().includes(searchQuery.toLowerCase());
     return matchesCategory && matchesSearch && isAvailable;
-  });
-
-  // Filter events for search
-  const filteredEvents = availableEvents.filter(event => {
-    const matchesSearch = event.name.toLowerCase().includes(searchQuery.toLowerCase());
-    return matchesSearch;
   });
 
   const subtotal = getCartSubtotal();
@@ -161,157 +152,56 @@ export default function POSScreen() {
                     : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                 }`}
               >
-                <span>{cat.emoji}</span>
-                <span>{cat.name}</span>
-              </button>
-            ))}
-          {/* Events Tab */}
-          {availableEvents.length > 0 && (
-            <button
-              onClick={() => setActiveCategory('events')}
-              className={`flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-bold whitespace-nowrap transition-all ${
-                activeCategory === 'events'
-                  ? 'bg-purple-600 text-white shadow-md shadow-purple-200'
-                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-              }`}
-            >
-              <span>🎉</span>
-              <span>Events</span>
+              <span>{cat.emoji}</span>
+              <span>{cat.name}</span>
             </button>
-          )}
+          ))}
         </div>
-
         {/* Product Grid */}
         <div className="flex-1 overflow-y-auto p-3">
-          {activeCategory === 'events' ? (
-            // Events Grid
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-3">
-              {filteredEvents.map(event => {
-                const inCart = cart.find(c => c.product.id === event.id);
-                return (
-                  <button
-                    key={event.id}
-                    onClick={() => {
-                      // Convert event to MenuItem format for cart
-                      const eventAsMenuItem = {
-                        id: event.id,
-                        name: event.name,
-                        description: event.description,
-                        price: event.price,
-                        category: 'events',
-                        emoji: '🎉',
-                        color: 'from-purple-400 to-purple-600',
-                        available: true,
-                        image: event.image,
-                      };
-                      addToCart(eventAsMenuItem);
-                    }}
-                    className={`relative flex flex-col p-4 rounded-xl border-2 transition-all active:scale-95 text-left ${
-                      inCart
-                        ? 'border-purple-400 bg-purple-50 shadow-md shadow-purple-100'
-                        : 'border-gray-100 hover:border-purple-200 hover:shadow-md bg-white'
-                    }`}
-                  >
-                    {inCart && (
-                      <div className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-purple-500 text-white text-[10px] font-bold flex items-center justify-center shadow-md">
-                        {inCart.quantity}
-                      </div>
-                    )}
-                    {event.image ? (
-                      <img 
-                        src={event.image} 
-                        alt={event.name}
-                        className="w-full h-32 rounded-lg object-cover mb-3"
-                      />
-                    ) : (
-                      <div className="w-full h-32 rounded-lg bg-gradient-to-br from-purple-400 to-purple-600 flex items-center justify-center text-4xl mb-3">
-                        🎉
-                      </div>
-                    )}
-                    <span className="text-sm font-bold text-gray-800 mb-1">
-                      {event.name}
-                    </span>
-                    {event.description && (
-                      <span className="text-[10px] text-gray-500 mb-2 line-clamp-2">
-                        {event.description}
-                      </span>
-                    )}
-                    {event.includes.length > 0 && (
-                      <div className="mb-2">
-                        <p className="text-[10px] text-gray-400 font-bold mb-1">Includes:</p>
-                        <div className="flex flex-wrap gap-1">
-                          {event.includes.slice(0, 3).map((item, i) => (
-                            <span key={i} className="text-[9px] px-1.5 py-0.5 rounded-full bg-purple-100 text-purple-700">
-                              {item}
-                            </span>
-                          ))}
-                          {event.includes.length > 3 && (
-                            <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-gray-100 text-gray-600">
-                              +{event.includes.length - 3} more
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                    )}
-                    <span className="text-sm font-black text-purple-600 mt-auto">
-                      OMR {event.price.toFixed(3)}
-                    </span>
-                  </button>
-                );
-              })}
-            </div>
-          ) : (
-            // Regular Menu Grid
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-3 xl:grid-cols-4 gap-2">
-              {filteredItems.map(item => {
-                const inCart = cart.find(c => c.product.id === item.id);
-                return (
-                  <button
-                    key={item.id}
-                    onClick={() => addToCart(item)}
-                    className={`relative flex flex-col items-center p-3 rounded-xl border-2 transition-all active:scale-95 ${
-                      inCart
-                        ? 'border-orange-400 bg-orange-50 shadow-md shadow-orange-100'
-                        : 'border-gray-100 hover:border-orange-200 hover:shadow-md bg-white'
-                    }`}
-                  >
-                    {inCart && (
-                      <div className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-orange-500 text-white text-[10px] font-bold flex items-center justify-center shadow-md">
-                        {inCart.quantity}
-                      </div>
-                    )}
-                    {(customImages[item.id] || item.image) ? (
-                      <img 
-                        src={customImages[item.id] || item.image} 
-                        alt={item.name}
-                        className="w-10 h-10 rounded-lg object-cover mb-2"
-                        onError={(e) => {
-                          e.currentTarget.style.display = 'none';
-                          e.currentTarget.nextElementSibling?.classList.remove('hidden');
-                        }}
-                      />
-                    ) : null}
-                    <div className={`${(customImages[item.id] || item.image) ? 'hidden' : ''} w-10 h-10 rounded-lg bg-gradient-to-br ${item.color} flex items-center justify-center text-lg mb-2`}>
-                      {item.emoji}
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-3 xl:grid-cols-4 gap-2">
+            {filteredItems.map(item => {
+              const inCart = cart.find(c => c.product.id === item.id);
+              return (
+                <button
+                  key={item.id}
+                  onClick={() => addToCart(item)}
+                  className={`relative flex flex-col items-center p-3 rounded-xl border-2 transition-all active:scale-95 ${
+                    inCart
+                      ? 'border-orange-400 bg-orange-50 shadow-md shadow-orange-100'
+                      : 'border-gray-100 hover:border-orange-200 hover:shadow-md bg-white'
+                  }`}
+                >
+                  {inCart && (
+                    <div className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-orange-500 text-white text-[10px] font-bold flex items-center justify-center shadow-md">
+                      {inCart.quantity}
                     </div>
-                    <span className="text-[11px] font-bold text-gray-800 text-center leading-tight mb-1 line-clamp-2">
-                      {item.name}
-                    </span>
-                    <span className="text-xs font-black text-orange-600">
-                      OMR {item.price.toFixed(3)}
-                    </span>
-                  </button>
-                );
-              })}
-            </div>
-          )}
-          {activeCategory === 'events' && filteredEvents.length === 0 && (
-            <div className="flex flex-col items-center justify-center h-40 text-gray-400">
-              <i className="fas fa-calendar-star text-3xl mb-2"></i>
-              <p className="text-sm">No event packages found</p>
-            </div>
-          )}
-          {activeCategory !== 'events' && filteredItems.length === 0 && (
+                  )}
+                  {(customImages[item.id] || item.image) ? (
+                    <img 
+                      src={customImages[item.id] || item.image} 
+                      alt={item.name}
+                      className="w-10 h-10 rounded-lg object-cover mb-2"
+                      onError={(e) => {
+                        e.currentTarget.style.display = 'none';
+                        e.currentTarget.nextElementSibling?.classList.remove('hidden');
+                      }}
+                    />
+                  ) : null}
+                  <div className={`${(customImages[item.id] || item.image) ? 'hidden' : ''} w-10 h-10 rounded-lg bg-gradient-to-br ${item.color} flex items-center justify-center text-lg mb-2`}>
+                    {item.emoji}
+                  </div>
+                  <span className="text-[11px] font-bold text-gray-800 text-center leading-tight mb-1 line-clamp-2">
+                    {item.name}
+                  </span>
+                  <span className="text-xs font-black text-orange-600">
+                    OMR {item.price.toFixed(3)}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+          {filteredItems.length === 0 && (
             <div className="flex flex-col items-center justify-center h-40 text-gray-400">
               <i className="fas fa-search text-3xl mb-2"></i>
               <p className="text-sm">No items found</p>
