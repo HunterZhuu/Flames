@@ -56,10 +56,30 @@ export interface EmailConfig {
   autoSyncOnConnect: boolean;
 }
 
+export interface PrinterDevice {
+  id: string;
+  name: string;
+  type: 'thermal' | 'impact' | 'laser' | 'inkjet';
+  model: string;
+  connectionType: 'wifi' | 'lan' | 'usb' | 'bluetooth';
+  ipAddress: string;
+  port: number;
+  subnetMask: string;
+  gateway: string;
+  enabled: boolean;
+  isDefault: boolean;
+}
+
 export interface PrinterConfig {
   autoPrintReceipt: boolean;
   autoPrintKitchen: boolean;
   printDelay: number;
+  printers: PrinterDevice[];
+  networkConfig: {
+    ipadIP: string;
+    subnetMask: string;
+    gateway: string;
+  };
 }
 
 export interface PaymentMethod {
@@ -143,6 +163,11 @@ interface AppState {
   removeCustomImage: (itemId: string) => void;
   updateEmailConfig: (config: Partial<EmailConfig>) => void;
   updatePrinterConfig: (config: Partial<PrinterConfig>) => void;
+  addPrinter: (printer: PrinterDevice) => void;
+  updatePrinter: (id: string, updates: Partial<PrinterDevice>) => void;
+  removePrinter: (id: string) => void;
+  setDefaultPrinter: (id: string) => void;
+  updateNetworkConfig: (config: Partial<PrinterConfig['networkConfig']>) => void;
   addPendingEmail: (email: PendingEmail) => void;
   updatePendingEmail: (id: string, updates: Partial<PendingEmail>) => void;
   removePendingEmail: (id: string) => void;
@@ -194,6 +219,26 @@ export const useStore = create<AppState>()(
         autoPrintReceipt: true,
         autoPrintKitchen: false,
         printDelay: 1500,
+        printers: [
+          {
+            id: 'epson-m362a',
+            name: 'EPSON TM-m30II (M362A)',
+            type: 'thermal',
+            model: 'TM-m30II',
+            connectionType: 'lan',
+            ipAddress: '192.168.8.108',
+            port: 9100,
+            subnetMask: '255.255.255.0',
+            gateway: '192.168.8.1',
+            enabled: true,
+            isDefault: true,
+          },
+        ],
+        networkConfig: {
+          ipadIP: '192.168.8.100',
+          subnetMask: '255.255.255.0',
+          gateway: '192.168.8.1',
+        },
       },
       paymentMethods: [
         { id: 'cash', name: 'Cash', icon: 'fa-money-bill-wave', enabled: true, color: 'green', sortOrder: 1 },
@@ -301,6 +346,56 @@ export const useStore = create<AppState>()(
 
       updateEmailConfig: (config) => set({ emailConfig: { ...get().emailConfig, ...config } }),
       updatePrinterConfig: (config) => set({ printerConfig: { ...get().printerConfig, ...config } }),
+      
+      addPrinter: (printer) => {
+        set({ 
+          printerConfig: { 
+            ...get().printerConfig, 
+            printers: [...get().printerConfig.printers, printer] 
+          } 
+        });
+      },
+      
+      updatePrinter: (id, updates) => {
+        set({ 
+          printerConfig: { 
+            ...get().printerConfig, 
+            printers: get().printerConfig.printers.map(p => 
+              p.id === id ? { ...p, ...updates } : p
+            ) 
+          } 
+        });
+      },
+      
+      removePrinter: (id) => {
+        set({ 
+          printerConfig: { 
+            ...get().printerConfig, 
+            printers: get().printerConfig.printers.filter(p => p.id !== id) 
+          } 
+        });
+      },
+      
+      setDefaultPrinter: (id) => {
+        set({ 
+          printerConfig: { 
+            ...get().printerConfig, 
+            printers: get().printerConfig.printers.map(p => ({
+              ...p,
+              isDefault: p.id === id
+            }))
+          } 
+        });
+      },
+      
+      updateNetworkConfig: (config) => {
+        set({ 
+          printerConfig: { 
+            ...get().printerConfig, 
+            networkConfig: { ...get().printerConfig.networkConfig, ...config } 
+          } 
+        });
+      },
 
       addPendingEmail: (email) => set({ pendingEmails: [...get().pendingEmails, email] }),
       updatePendingEmail: (id, updates) => {

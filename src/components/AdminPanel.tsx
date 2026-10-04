@@ -3,9 +3,10 @@ import { useStore, defaultPermissions, type StaffMember, type StaffPermissions }
 import { getEffectiveMenu, categories, type MenuItem } from '../data/menu';
 import { syncPendingEmails, printReceipt, queueEmailForOrder, testPrint } from '../utils/syncService';
 import { compressImage } from '../utils/imageUtils';
+import PrinterSettings from './PrinterSettings';
 import toast from 'react-hot-toast';
 
-type AdminTab = 'dashboard' | 'staff' | 'orders' | 'menu' | 'settings';
+type AdminTab = 'dashboard' | 'staff' | 'orders' | 'menu' | 'settings' | 'printers';
 
 export default function AdminPanel() {
   const [activeTab, setActiveTab] = useState<AdminTab>('dashboard');
@@ -25,6 +26,7 @@ export default function AdminPanel() {
     { id: 'staff' as const, label: 'Staff', icon: 'fa-users', requires: 'canManageStaff' as keyof StaffPermissions },
     { id: 'orders' as const, label: 'Orders', icon: 'fa-receipt', requires: 'canViewAllOrders' as keyof StaffPermissions },
     { id: 'menu' as const, label: 'Menu', icon: 'fa-burger', requires: 'canEditMenu' as keyof StaffPermissions },
+    { id: 'printers' as const, label: 'Printers', icon: 'fa-print', requires: 'canManageStaff' as keyof StaffPermissions },
     { id: 'settings' as const, label: 'Settings', icon: 'fa-envelope', requires: 'canManageStaff' as keyof StaffPermissions },
   ].filter(tab => !tab.requires || (currentUser?.permissions[tab.requires]));
 
@@ -42,6 +44,7 @@ export default function AdminPanel() {
         {activeTab === 'staff' && <StaffManager />}
         {activeTab === 'orders' && <OrderHistory />}
         {activeTab === 'menu' && <MenuManager />}
+        {activeTab === 'printers' && <PrinterSettings />}
         {activeTab === 'settings' && <SettingsPanel />}
       </div>
     </div>
