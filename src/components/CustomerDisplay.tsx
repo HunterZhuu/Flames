@@ -93,9 +93,9 @@ export default function CustomerDisplay({ onClose }: CustomerDisplayProps) {
       {/* Main Content */}
       <div className={`h-full pt-20 ${cart.length > 0 ? 'pb-32' : 'pb-20'} px-4 overflow-hidden ${currentView === 'slideshow' ? 'p-0' : ''}`}>
         {currentView === 'grid' ? (
-          // Grid View - Improved responsive layout
+          // Grid View - Bigger pictures layout
           <div className="h-full overflow-y-auto">
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 p-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 p-5">
               {gutechItems.map((item) => {
                 const isSelected = selectedItem === item.id;
                 const inCart = cart.find(c => c.product.id === item.id);
@@ -103,23 +103,23 @@ export default function CustomerDisplay({ onClose }: CustomerDisplayProps) {
                   <div
                     key={item.id}
                     className={`relative group transition-all duration-300 ${
-                      isSelected ? 'col-span-2 row-span-2' : ''
+                      isSelected ? 'sm:col-span-2 lg:col-span-2' : ''
                     }`}
                   >
-                    <div className={`relative overflow-hidden rounded-2xl bg-gradient-to-br ${item.color} shadow-2xl transition-all duration-300 ${
-                      isSelected ? 'scale-105' : 'hover:scale-105'
+                    <div className={`relative overflow-hidden rounded-3xl bg-gradient-to-br ${item.color} shadow-2xl transition-all duration-300 ${
+                      isSelected ? 'scale-[1.02]' : 'hover:scale-[1.02]'
                     }`}>
-                      {/* Image */}
-                      <div className={`${isSelected ? 'h-64' : 'h-32'} overflow-hidden`}>
+                      {/* Image - Bigger */}
+                      <div className={`${isSelected ? 'h-96' : 'h-64'} overflow-hidden`}>
                         {customImages[item.id] || item.image ? (
                           <img
                             src={customImages[item.id] || item.image}
                             alt={item.name}
-                            className={`w-full ${isSelected ? 'h-64' : 'h-32'} object-cover transition-transform duration-500 group-hover:scale-110`}
+                            className={`w-full ${isSelected ? 'h-96' : 'h-64'} object-cover transition-transform duration-500 group-hover:scale-110`}
                           />
                         ) : (
-                          <div className={`w-full ${isSelected ? 'h-64' : 'h-32'} flex items-center justify-center`}>
-                            <span className={`${isSelected ? 'text-7xl' : 'text-5xl'}`}>{item.emoji}</span>
+                          <div className={`w-full ${isSelected ? 'h-96' : 'h-64'} flex items-center justify-center`}>
+                            <span className={`${isSelected ? 'text-9xl' : 'text-7xl'}`}>{item.emoji}</span>
                           </div>
                         )}
                       </div>
@@ -128,16 +128,16 @@ export default function CustomerDisplay({ onClose }: CustomerDisplayProps) {
                       <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/50 to-transparent"></div>
 
                       {/* Content */}
-                      <div className="absolute bottom-0 left-0 right-0 p-3 text-white">
-                        <h3 className={`${isSelected ? 'text-2xl' : 'text-sm'} font-black mb-1 line-clamp-2`}>
+                      <div className="absolute bottom-0 left-0 right-0 p-5 text-white">
+                        <h3 className={`${isSelected ? 'text-3xl' : 'text-xl'} font-black mb-2 line-clamp-2 drop-shadow-lg`}>
                           {item.name}
                         </h3>
                         
                         {isSelected && (
                           <div className="animate-fade-in">
-                            <p className="text-xs text-gray-200 mb-2 line-clamp-3">{item.description}</p>
-                            <div className="flex items-center justify-between mb-2">
-                              <span className="text-xl font-black text-orange-400">
+                            <p className="text-sm text-gray-200 mb-3 line-clamp-3 drop-shadow">{item.description}</p>
+                            <div className="flex items-center justify-between mb-3">
+                              <span className="text-2xl font-black text-orange-400 drop-shadow-lg">
                                 OMR {item.price.toFixed(3)}
                               </span>
                               <button
@@ -145,7 +145,7 @@ export default function CustomerDisplay({ onClose }: CustomerDisplayProps) {
                                   e.stopPropagation();
                                   setSelectedItem(null);
                                 }}
-                                className="px-3 py-1 rounded-lg bg-white/20 hover:bg-white/30 text-xs font-bold transition-all"
+                                className="px-4 py-2 rounded-xl bg-white/20 hover:bg-white/30 text-sm font-bold transition-all backdrop-blur-sm"
                               >
                                 <i className="fas fa-times mr-1"></i> Close
                               </button>
@@ -154,7 +154,7 @@ export default function CustomerDisplay({ onClose }: CustomerDisplayProps) {
                         )}
                         
                         {!isSelected && (
-                          <p className="text-base font-black text-orange-400 mb-2">
+                          <p className="text-xl font-black text-orange-400 mb-3 drop-shadow-lg">
                             OMR {item.price.toFixed(3)}
                           </p>
                         )}
@@ -169,7 +169,7 @@ export default function CustomerDisplay({ onClose }: CustomerDisplayProps) {
                               duration: 2000,
                             });
                           }}
-                          className={`w-full py-2 rounded-lg font-bold text-xs transition-all ${
+                          className={`w-full py-3 rounded-xl font-bold text-sm transition-all shadow-lg ${
                             inCart
                               ? 'bg-orange-500 text-white hover:bg-orange-600'
                               : 'bg-white text-gray-900 hover:bg-gray-100'
@@ -177,12 +177,12 @@ export default function CustomerDisplay({ onClose }: CustomerDisplayProps) {
                         >
                           {inCart ? (
                             <>
-                              <i className="fas fa-check mr-1"></i>
+                              <i className="fas fa-check mr-2"></i>
                               In Cart ({inCart.quantity})
                             </>
                           ) : (
                             <>
-                              <i className="fas fa-cart-plus mr-1"></i>
+                              <i className="fas fa-cart-plus mr-2"></i>
                               Add to Cart
                             </>
                           )}
@@ -191,7 +191,7 @@ export default function CustomerDisplay({ onClose }: CustomerDisplayProps) {
 
                       {/* Cart Badge */}
                       {inCart && !isSelected && (
-                        <div className="absolute top-2 right-2 w-7 h-7 rounded-full bg-orange-500 text-white text-xs font-bold flex items-center justify-center shadow-lg">
+                        <div className="absolute top-3 right-3 w-9 h-9 rounded-full bg-orange-500 text-white text-sm font-bold flex items-center justify-center shadow-xl border-2 border-white">
                           {inCart.quantity}
                         </div>
                       )}
