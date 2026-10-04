@@ -10,6 +10,23 @@ export interface MenuItem {
   image?: string; // base64 encoded image or URL (optional)
 }
 
+export interface EventItem {
+  id: string;
+  name: string;
+  description: string;
+  price: number; // in OMR
+  includes: string[]; // list of items included
+  image?: string; // base64 encoded image
+  available: boolean;
+  category: string; // e.g., "Party Package", "Family Deal", "Corporate Event"
+}
+
+export interface EventCategory {
+  id: string;
+  name: string;
+  emoji: string;
+}
+
 export interface Category {
   id: string;
   name: string;
@@ -29,6 +46,14 @@ export const categories: Category[] = [
   { id: 'gathering', name: 'Gathering Box', emoji: '📦' },
   { id: 'drinks', name: 'Drinks', emoji: '🥤' },
   { id: 'extras', name: 'Extras', emoji: '✨' },
+];
+
+export const eventCategories: EventCategory[] = [
+  { id: 'party', name: 'Party Packages', emoji: '🎉' },
+  { id: 'family', name: 'Family Deals', emoji: '👨‍👩‍👧‍👦' },
+  { id: 'corporate', name: 'Corporate Events', emoji: '💼' },
+  { id: 'wedding', name: 'Wedding Catering', emoji: '💍' },
+  { id: 'birthday', name: 'Birthday Specials', emoji: '🎂' },
 ];
 
 // Helper function to get the effective menu (base + custom - removed)

@@ -1,11 +1,11 @@
 import { useState, useEffect } from 'react';
 import { useStore, StaffMember, defaultPermissions, StaffPermissions } from '../store/store';
-import { menuItems, getEffectiveMenu, categories, MenuItem } from '../data/menu';
+import { menuItems, getEffectiveMenu, categories, eventCategories, MenuItem, EventItem } from '../data/menu';
 import { syncPendingEmails, printReceipt, queueEmailForOrder } from '../utils/syncService';
 import { compressImage } from '../utils/imageUtils';
 import toast from 'react-hot-toast';
 
-type AdminTab = 'dashboard' | 'staff' | 'orders' | 'menu' | 'settings';
+type AdminTab = 'dashboard' | 'staff' | 'orders' | 'menu' | 'events' | 'settings';
 
 export default function AdminPanel() {
   const [activeTab, setActiveTab] = useState<AdminTab>('dashboard');
@@ -27,6 +27,7 @@ export default function AdminPanel() {
     { id: 'staff' as const, label: 'Staff', icon: 'fa-users', requires: 'canManageStaff' as keyof StaffPermissions },
     { id: 'orders' as const, label: 'Orders', icon: 'fa-receipt', requires: 'canViewAllOrders' as keyof StaffPermissions },
     { id: 'menu' as const, label: 'Menu', icon: 'fa-burger', requires: 'canEditMenu' as keyof StaffPermissions },
+    { id: 'events' as const, label: 'Events', icon: 'fa-calendar-star', requires: 'canEditMenu' as keyof StaffPermissions },
     { id: 'settings' as const, label: 'Settings', icon: 'fa-envelope', requires: 'canManageStaff' as keyof StaffPermissions },
   ].filter(tab => !tab.requires || (currentUser?.permissions[tab.requires]));
 
@@ -56,6 +57,7 @@ export default function AdminPanel() {
         {activeTab === 'staff' && <StaffManager />}
         {activeTab === 'orders' && <OrderHistory />}
         {activeTab === 'menu' && <MenuManager />}
+        {activeTab === 'events' && <EventsManager />}
         {activeTab === 'settings' && <SettingsPanel />}
       </div>
     </div>
@@ -1213,6 +1215,324 @@ function AddItemModal({ onClose, onAdd }: { onClose: () => void; onAdd: (item: M
           </div>
         </div>
       </div>
+    </div>
+  );
+}
+
+// Events Manager
+function EventsManager() {
+  const { eventItems, addEventItem, updateEventItem, removeEventItem, toggleEventItem } = useStore();
+  const [showAddEvent, setShowAddEvent] = useState(false);
+  const [editingEvent, setEditingEvent] = useState<EventItem | null>(null);
+  const [formData, setFormData] = useState({
+    name: '',
+    description: '',
+    price: '',
+    includes: '',
+    category: 'party',
+    image: '',
+  });
+
+  const handleSave = () => {
+    if (!formData.name || !formData.price) {
+      toast.error('Name and price are required');
+      return;
+    }
+
+    const price = parseFloat(formData.price);
+    if (isNaN(price) || price <= 0) {
+      toast.error('Invalid price');
+      return;
+    }
+
+    const includes = formData.includes.split(',').map(s => s.trim()).filter(s => s);
+
+    if (editingEvent) {
+      updateEventItem(editingEvent.id, {
+        name: formData.name,
+        description: formData.description,
+        price: price,
+        includes: includes,
+        category: formData.category,
+        image: formData.image,
+      });
+      toast.success('Event updated!');
+    } else {
+      const newItem: EventItem = {
+        id: `event-${Date.now()}`,
+        name: formData.name,
+        description: formData.description,
+        price: price,
+        includes: includes,
+        category: formData.category,
+        image: formData.image,
+        available: true,
+      };
+      addEventItem(newItem);
+      toast.success('Event added!');
+    }
+    resetForm();
+  };
+
+  const resetForm = () => {
+    setShowAddEvent(false);
+    setEditingEvent(null);
+    setFormData({
+      name: '',
+      description: '',
+      price: '',
+      includes: '',
+      category: 'party',
+      image: '',
+    });
+  };
+
+  const handleEdit = (event: EventItem) => {
+    setEditingEvent(event);
+    setFormData({
+      name: event.name,
+      description: event.description,
+      price: event.price.toString(),
+      includes: event.includes.join(', '),
+      category: event.category,
+      image: event.image || '',
+    });
+    setShowAddEvent(true);
+  };
+
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error('Image too large. Max 5MB');
+      return;
+    }
+
+    try {
+      const compressed = await compressImage(file, 600, 0.8);
+      setFormData({ ...formData, image: compressed });
+      toast.success('Image uploaded!');
+    } catch (err) {
+      toast.error('Failed to upload image');
+    }
+  };
+
+  const groupedEvents = eventItems.reduce((acc, item) => {
+    if (!acc[item.category]) acc[item.category] = [];
+    acc[item.category].push(item);
+    return acc;
+  }, {} as Record<string, EventItem[]>);
+
+  return (
+    <div className="p-4 space-y-4">
+      <div className="flex items-center justify-between flex-wrap gap-2">
+        <div>
+          <h2 className="font-bold text-gray-800">Events Management</h2>
+          <p className="text-xs text-gray-400">Create special packages for events and parties</p>
+        </div>
+        <button
+          onClick={() => setShowAddEvent(true)}
+          className="px-4 py-2 rounded-lg bg-purple-500 text-white text-xs font-bold hover:bg-purple-600 transition-all shadow-md"
+        >
+          <i className="fas fa-plus mr-1"></i> Add Event Package
+        </button>
+      </div>
+
+      {/* Event Items */}
+      {Object.keys(groupedEvents).length === 0 ? (
+        <div className="text-center py-12 text-gray-400">
+          <i className="fas fa-calendar-star text-4xl mb-3"></i>
+          <p className="text-sm font-medium">No event packages yet</p>
+          <p className="text-xs mt-1">Click "Add Event Package" to create your first event</p>
+        </div>
+      ) : (
+        <div className="space-y-4">
+          {Object.entries(groupedEvents).map(([category, items]) => (
+            <div key={category}>
+              <h3 className="text-xs font-bold text-gray-500 uppercase mb-2 capitalize">
+                {eventCategories.find(c => c.id === category)?.emoji} {category}
+              </h3>
+              <div className="grid gap-2">
+                {items.map(event => (
+                  <div key={event.id} className={`flex items-center justify-between p-3 rounded-xl border transition-all ${
+                    event.available ? 'bg-white border-gray-100' : 'bg-gray-50 border-gray-200 opacity-60'
+                  }`}>
+                    <div className="flex items-center gap-3">
+                      {event.image ? (
+                        <img 
+                          src={event.image} 
+                          alt={event.name}
+                          className="w-12 h-12 rounded-lg object-cover"
+                        />
+                      ) : (
+                        <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-purple-400 to-purple-600 flex items-center justify-center text-xl">
+                          🎉
+                        </div>
+                      )}
+                      <div>
+                        <p className="text-sm font-bold text-gray-800">{event.name}</p>
+                        <p className="text-xs text-gray-500">OMR {event.price.toFixed(3)}</p>
+                        {event.includes.length > 0 && (
+                          <p className="text-[10px] text-gray-400 mt-0.5">
+                            Includes: {event.includes.join(', ')}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => handleEdit(event)}
+                        className="px-2 py-1.5 rounded-lg text-[10px] font-bold bg-blue-100 text-blue-600 hover:bg-blue-200 transition-all"
+                      >
+                        <i className="fas fa-edit"></i>
+                      </button>
+                      <button
+                        onClick={() => toggleEventItem(event.id)}
+                        className={`px-3 py-1.5 rounded-lg text-[10px] font-bold transition-all ${
+                          event.available
+                            ? 'bg-green-100 text-green-600 hover:bg-green-200'
+                            : 'bg-red-100 text-red-600 hover:bg-red-200'
+                        }`}
+                      >
+                        <i className={`fas ${event.available ? 'fa-eye' : 'fa-eye-slash'} mr-1`}></i>
+                        {event.available ? 'Available' : 'Hidden'}
+                      </button>
+                      <button
+                        onClick={() => {
+                          if (confirm(`Remove "${event.name}"?`)) {
+                            removeEventItem(event.id);
+                            toast.success('Event removed');
+                          }
+                        }}
+                        className="px-2 py-1.5 rounded-lg text-[10px] font-bold bg-red-100 text-red-600 hover:bg-red-200 transition-all"
+                      >
+                        <i className="fas fa-trash"></i>
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Add/Edit Event Modal */}
+      {showAddEvent && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl p-5 max-w-md w-full max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="font-bold text-sm text-gray-800">
+                {editingEvent ? 'Edit Event Package' : 'Add Event Package'}
+              </h3>
+              <button
+                onClick={resetForm}
+                className="w-7 h-7 rounded-full bg-gray-100 flex items-center justify-center text-gray-400 hover:bg-gray-200"
+              >
+                <i className="fas fa-times text-xs"></i>
+              </button>
+            </div>
+
+            <div className="space-y-3">
+              <div>
+                <label className="text-xs font-bold text-gray-700 mb-1 block">Package Name *</label>
+                <input
+                  type="text"
+                  value={formData.name}
+                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  placeholder="e.g., Party Bundle for 10"
+                  className="w-full px-3 py-2 rounded-lg border border-gray-200 focus:border-purple-400 focus:ring-2 focus:ring-purple-100 outline-none text-sm"
+                />
+              </div>
+
+              <div>
+                <label className="text-xs font-bold text-gray-700 mb-1 block">Description</label>
+                <textarea
+                  value={formData.description}
+                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                  placeholder="Package description..."
+                  rows={2}
+                  className="w-full px-3 py-2 rounded-lg border border-gray-200 focus:border-purple-400 focus:ring-2 focus:ring-purple-100 outline-none text-sm resize-none"
+                />
+              </div>
+
+              <div>
+                <label className="text-xs font-bold text-gray-700 mb-1 block">Price (OMR) *</label>
+                <input
+                  type="number"
+                  step="0.001"
+                  value={formData.price}
+                  onChange={(e) => setFormData({ ...formData, price: e.target.value })}
+                  placeholder="e.g., 15.000"
+                  className="w-full px-3 py-2 rounded-lg border border-gray-200 focus:border-purple-400 focus:ring-2 focus:ring-purple-100 outline-none text-sm"
+                />
+              </div>
+
+              <div>
+                <label className="text-xs font-bold text-gray-700 mb-1 block">Category</label>
+                <select
+                  value={formData.category}
+                  onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+                  className="w-full px-3 py-2 rounded-lg border border-gray-200 text-sm outline-none"
+                >
+                  {eventCategories.map(cat => (
+                    <option key={cat.id} value={cat.id}>{cat.emoji} {cat.name}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="text-xs font-bold text-gray-700 mb-1 block">Includes (comma-separated)</label>
+                <input
+                  type="text"
+                  value={formData.includes}
+                  onChange={(e) => setFormData({ ...formData, includes: e.target.value })}
+                  placeholder="e.g., 10 Burgers, 5 Fries, 10 Drinks"
+                  className="w-full px-3 py-2 rounded-lg border border-gray-200 focus:border-purple-400 focus:ring-2 focus:ring-purple-100 outline-none text-sm"
+                />
+                <p className="text-[10px] text-gray-400 mt-1">List items included in this package</p>
+              </div>
+
+              <div>
+                <label className="text-xs font-bold text-gray-700 mb-1 block">Package Image</label>
+                {formData.image && (
+                  <div className="mb-2">
+                    <img src={formData.image} alt="Preview" className="w-full h-32 object-cover rounded-lg" />
+                  </div>
+                )}
+                <label className="block">
+                  <div className="w-full py-2.5 rounded-lg bg-purple-500 text-white font-bold text-xs text-center cursor-pointer hover:bg-purple-600 transition-all">
+                    <i className="fas fa-upload mr-2"></i>
+                    {formData.image ? 'Change Image' : 'Upload Image'}
+                  </div>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={handleImageUpload}
+                  />
+                </label>
+              </div>
+
+              <div className="flex gap-2 pt-2">
+                <button
+                  onClick={handleSave}
+                  className="flex-1 py-2.5 rounded-lg bg-purple-500 text-white font-bold text-xs hover:bg-purple-600 transition-all"
+                >
+                  <i className="fas fa-save mr-1"></i> {editingEvent ? 'Update' : 'Add'} Package
+                </button>
+                <button
+                  onClick={resetForm}
+                  className="flex-1 py-2.5 rounded-lg bg-gray-100 text-gray-700 font-bold text-xs hover:bg-gray-200 transition-all"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
