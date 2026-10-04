@@ -77,6 +77,19 @@ export default function POSScreen() {
     setShowReceipt(true);
     setCashAmount('');
     toast.success('Order completed! 🎉');
+
+    // Auto-print receipt if enabled
+    const { printerConfig } = useStore.getState();
+    if (printerConfig.autoPrintReceipt) {
+      setTimeout(() => {
+        printReceipt(order, 'customer');
+        if (printerConfig.autoPrintKitchen) {
+          setTimeout(() => {
+            printReceipt(order, 'kitchen');
+          }, 500);
+        }
+      }, printerConfig.printDelay);
+    }
   };
 
   // Use the printReceipt function from syncService

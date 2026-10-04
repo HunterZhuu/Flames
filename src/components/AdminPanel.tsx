@@ -1220,8 +1220,9 @@ function AddItemModal({ onClose, onAdd }: { onClose: () => void; onAdd: (item: M
 
 // Settings Panel (Email & Sync)
 function SettingsPanel() {
-  const { emailConfig, updateEmailConfig, pendingEmails, clearSentEmails, removePendingEmail, paymentMethods, addPaymentMethod, updatePaymentMethod, removePaymentMethod, togglePaymentMethod } = useStore();
+  const { emailConfig, updateEmailConfig, pendingEmails, clearSentEmails, removePendingEmail, paymentMethods, addPaymentMethod, updatePaymentMethod, removePaymentMethod, togglePaymentMethod, printerConfig, updatePrinterConfig } = useStore();
   const [localConfig, setLocalConfig] = useState(emailConfig);
+  const [localPrinterConfig, setLocalPrinterConfig] = useState(printerConfig);
   const [syncing, setSyncing] = useState(false);
   const [showAddPayment, setShowAddPayment] = useState(false);
   const [newPayment, setNewPayment] = useState({ name: '', icon: 'fa-money-bill-wave', color: 'blue' });
@@ -1303,6 +1304,83 @@ function SettingsPanel() {
         >
           <i className="fas fa-save mr-1"></i> Save Settings
         </button>
+      </div>
+
+      {/* Printer Settings */}
+      <div className="bg-white rounded-xl p-4 border border-gray-100 space-y-3">
+        <h3 className="font-bold text-sm text-gray-800 flex items-center gap-2">
+          <i className="fas fa-print text-blue-500"></i>
+          Printer Settings
+        </h3>
+
+        <div className="flex items-center justify-between p-3 rounded-lg bg-gray-50">
+          <div>
+            <p className="text-xs font-bold text-gray-700">Auto-Print Customer Receipt</p>
+            <p className="text-[10px] text-gray-400">Automatically print receipt after completing order</p>
+          </div>
+          <button
+            onClick={() => {
+              const newValue = !localPrinterConfig.autoPrintReceipt;
+              setLocalPrinterConfig({ ...localPrinterConfig, autoPrintReceipt: newValue });
+              updatePrinterConfig({ autoPrintReceipt: newValue });
+              toast.success(newValue ? 'Auto-print enabled' : 'Auto-print disabled');
+            }}
+            className={`w-10 h-5 rounded-full transition-all ${localPrinterConfig.autoPrintReceipt ? 'bg-blue-500' : 'bg-gray-300'}`}
+          >
+            <div className={`w-4 h-4 rounded-full bg-white shadow transition-transform ${localPrinterConfig.autoPrintReceipt ? 'translate-x-5' : 'translate-x-0.5'}`}></div>
+          </button>
+        </div>
+
+        <div className="flex items-center justify-between p-3 rounded-lg bg-gray-50">
+          <div>
+            <p className="text-xs font-bold text-gray-700">Auto-Print Kitchen Ticket</p>
+            <p className="text-[10px] text-gray-400">Automatically print kitchen copy after order</p>
+          </div>
+          <button
+            onClick={() => {
+              const newValue = !localPrinterConfig.autoPrintKitchen;
+              setLocalPrinterConfig({ ...localPrinterConfig, autoPrintKitchen: newValue });
+              updatePrinterConfig({ autoPrintKitchen: newValue });
+              toast.success(newValue ? 'Kitchen auto-print enabled' : 'Kitchen auto-print disabled');
+            }}
+            className={`w-10 h-5 rounded-full transition-all ${localPrinterConfig.autoPrintKitchen ? 'bg-blue-500' : 'bg-gray-300'}`}
+          >
+            <div className={`w-4 h-4 rounded-full bg-white shadow transition-transform ${localPrinterConfig.autoPrintKitchen ? 'translate-x-5' : 'translate-x-0.5'}`}></div>
+          </button>
+        </div>
+
+        <div>
+          <label className="text-xs font-bold text-gray-700 mb-1 block">Print Delay (seconds)</label>
+          <input
+            type="number"
+            min="0"
+            max="10"
+            step="0.5"
+            value={localPrinterConfig.printDelay / 1000}
+            onChange={(e) => {
+              const newValue = Math.max(0, Math.min(10, parseFloat(e.target.value) || 0)) * 1000;
+              setLocalPrinterConfig({ ...localPrinterConfig, printDelay: newValue });
+              updatePrinterConfig({ printDelay: newValue });
+            }}
+            className="w-full px-3 py-2 rounded-lg border border-gray-200 focus:border-blue-400 focus:ring-2 focus:ring-blue-100 outline-none text-sm"
+          />
+          <p className="text-[10px] text-gray-400 mt-1">Delay before auto-printing (gives time to view receipt)</p>
+        </div>
+
+        <div className="p-3 rounded-lg bg-blue-50 border border-blue-200">
+          <div className="flex items-start gap-2">
+            <i className="fas fa-info-circle text-blue-500 mt-0.5"></i>
+            <div className="text-xs text-blue-700">
+              <p className="font-bold mb-1">Auto-Print Info:</p>
+              <ul className="list-disc list-inside space-y-1 text-[10px]">
+                <li>Receipt will print automatically after order completion</li>
+                <li>Delay allows you to view receipt before printing</li>
+                <li>Kitchen ticket prints separately if enabled</li>
+                <li>You can still manually print from receipt modal</li>
+              </ul>
+            </div>
+          </div>
+        </div>
       </div>
 
       {/* Branch Info */}

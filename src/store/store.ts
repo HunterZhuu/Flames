@@ -103,6 +103,12 @@ export interface EmailConfig {
   autoSyncOnConnect: boolean;
 }
 
+export interface PrinterConfig {
+  autoPrintReceipt: boolean; // Auto-print customer receipt after order
+  autoPrintKitchen: boolean; // Auto-print kitchen ticket after order
+  printDelay: number; // Delay in ms before printing (gives time to see receipt)
+}
+
 export interface PaymentMethod {
   id: string;
   name: string;
@@ -146,6 +152,9 @@ interface AppState {
   emailConfig: EmailConfig;
   pendingEmails: PendingEmail[];
   
+  // Printer Settings
+  printerConfig: PrinterConfig;
+  
   // Payment Methods
   paymentMethods: PaymentMethod[];
   
@@ -160,6 +169,7 @@ interface AppState {
   
   // Actions
   updateEmailConfig: (config: Partial<EmailConfig>) => void;
+  updatePrinterConfig: (config: Partial<PrinterConfig>) => void;
   addPendingEmail: (email: PendingEmail) => void;
   updatePendingEmail: (id: string, updates: Partial<PendingEmail>) => void;
   removePendingEmail: (id: string) => void;
@@ -226,6 +236,11 @@ export const useStore = create<AppState>()(
         autoSyncOnConnect: true,
       },
       pendingEmails: [],
+      printerConfig: {
+        autoPrintReceipt: true,
+        autoPrintKitchen: false,
+        printDelay: 1500,
+      },
       paymentMethods: [
         { id: 'cash', name: 'Cash', icon: 'fa-money-bill-wave', enabled: true, color: 'green', sortOrder: 1 },
         { id: 'card', name: 'Card', icon: 'fa-credit-card', enabled: true, color: 'blue', sortOrder: 2 },
@@ -354,6 +369,10 @@ export const useStore = create<AppState>()(
         set({ emailConfig: { ...get().emailConfig, ...config } });
       },
 
+      updatePrinterConfig: (config: Partial<PrinterConfig>) => {
+        set({ printerConfig: { ...get().printerConfig, ...config } });
+      },
+
       addPendingEmail: (email: PendingEmail) => {
         set({ pendingEmails: [...get().pendingEmails, email] });
       },
@@ -460,6 +479,7 @@ export const useStore = create<AppState>()(
         customImages: state.customImages,
         customMenuItems: state.customMenuItems,
         removedMenuItems: state.removedMenuItems,
+        printerConfig: state.printerConfig,
       }),
     }
   )
