@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useStore } from './store/store';
 import LoginScreen from './components/LoginScreen';
 import POSScreen from './components/POSScreen';
