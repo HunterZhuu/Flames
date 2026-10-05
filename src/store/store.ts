@@ -82,6 +82,12 @@ export interface PrinterConfig {
   };
 }
 
+export interface TaxConfig {
+  enabled: boolean;
+  rate: number; // percentage (e.g., 5 for 5%)
+  name: string; // e.g., "VAT"
+}
+
 export interface PaymentMethod {
   id: string;
   name: string;
@@ -138,6 +144,9 @@ interface AppState {
   // Printer
   printerConfig: PrinterConfig;
   
+  // Tax
+  taxConfig: TaxConfig;
+  
   // Payment
   paymentMethods: PaymentMethod[];
   
@@ -163,6 +172,7 @@ interface AppState {
   removeCustomImage: (itemId: string) => void;
   updateEmailConfig: (config: Partial<EmailConfig>) => void;
   updatePrinterConfig: (config: Partial<PrinterConfig>) => void;
+  updateTaxConfig: (config: Partial<TaxConfig>) => void;
   addPrinter: (printer: PrinterDevice) => void;
   updatePrinter: (id: string, updates: Partial<PrinterDevice>) => void;
   removePrinter: (id: string) => void;
@@ -239,6 +249,11 @@ export const useStore = create<AppState>()(
           subnetMask: '255.255.255.0',
           gateway: '192.168.8.1',
         },
+      },
+      taxConfig: {
+        enabled: false, // VAT disabled by default
+        rate: 5,
+        name: 'VAT',
       },
       paymentMethods: [
         { id: 'cash', name: 'Cash', icon: 'fa-money-bill-wave', enabled: true, color: 'green', sortOrder: 1 },
@@ -346,6 +361,7 @@ export const useStore = create<AppState>()(
 
       updateEmailConfig: (config) => set({ emailConfig: { ...get().emailConfig, ...config } }),
       updatePrinterConfig: (config) => set({ printerConfig: { ...get().printerConfig, ...config } }),
+      updateTaxConfig: (config) => set({ taxConfig: { ...get().taxConfig, ...config } }),
       
       addPrinter: (printer) => {
         set({ 
@@ -418,12 +434,16 @@ export const useStore = create<AppState>()(
       },
 
       getCartSubtotal: () => get().cart.reduce((sum, item) => sum + item.product.price * item.quantity, 0),
-      getCartTax: () => get().getCartSubtotal() * 0.05,
+      getCartTax: () => {
+        const { taxConfig } = get();
+        if (!taxConfig.enabled) return 0;
+        return get().getCartSubtotal() * (taxConfig.rate / 100);
+      },
       getCartTotal: () => get().getCartSubtotal() + get().getCartTax(),
     }),
     {
       name: 'flames-epos-storage',
-      version: 2, // Increment version for migration
+      version: 3, // Increment version for tax config migration
       migrate: (persistedState: any, version: number) => {
         // Migration from version 0/1 to version 2
         if (version < 2) {
@@ -455,6 +475,16 @@ export const useStore = create<AppState>()(
             }
           }
         }
+        // Migration from version 2 to version 3 - Add tax config
+        if (version < 3) {
+          if (!persistedState.taxConfig) {
+            persistedState.taxConfig = {
+              enabled: false, // VAT disabled by default
+              rate: 5,
+              name: 'VAT',
+            };
+          }
+        }
         return persistedState as AppState;
       },
       partialize: (state) => ({
@@ -468,6 +498,7 @@ export const useStore = create<AppState>()(
         customMenuItems: state.customMenuItems,
         removedMenuItems: state.removedMenuItems,
         printerConfig: state.printerConfig,
+        taxConfig: state.taxConfig,
       }),
     }
   )

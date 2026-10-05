@@ -614,14 +614,19 @@ function AddItemModal({ onClose, onAdd }: { onClose: () => void; onAdd: (item: M
 }
 
 function SettingsPanel() {
-  const { emailConfig, updateEmailConfig, pendingEmails, clearSentEmails, removePendingEmail, paymentMethods, addPaymentMethod, updatePaymentMethod, removePaymentMethod, togglePaymentMethod, printerConfig, updatePrinterConfig } = useStore();
+  const { emailConfig, updateEmailConfig, pendingEmails, clearSentEmails, removePendingEmail, paymentMethods, addPaymentMethod, updatePaymentMethod, removePaymentMethod, togglePaymentMethod, printerConfig, updatePrinterConfig, taxConfig, updateTaxConfig } = useStore();
   const [localConfig, setLocalConfig] = useState(emailConfig);
   const [localPrinterConfig, setLocalPrinterConfig] = useState(printerConfig);
+  const [localTaxConfig, setLocalTaxConfig] = useState(taxConfig);
   const [syncing, setSyncing] = useState(false);
   const [showAddPayment, setShowAddPayment] = useState(false);
   const [newPayment, setNewPayment] = useState({ name: '', icon: 'fa-money-bill-wave', color: 'blue' });
 
-  const handleSave = () => { updateEmailConfig(localConfig); toast.success('Settings saved!'); };
+  const handleSave = () => { 
+    updateEmailConfig(localConfig); 
+    updateTaxConfig(localTaxConfig);
+    toast.success('Settings saved!'); 
+  };
 
   const pendingCount = pendingEmails.filter(e => e.status === 'pending' || e.status === 'failed').length;
   const sentCount = pendingEmails.filter(e => e.status === 'sent').length;
@@ -698,6 +703,63 @@ function SettingsPanel() {
                 <li>Delay allows you to view receipt before printing</li>
                 <li>Kitchen ticket prints separately if enabled</li>
                 <li>You can still manually print from receipt modal</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="bg-white rounded-xl p-4 border border-gray-100 space-y-3">
+        <h3 className="font-bold text-sm text-gray-800 flex items-center gap-2"><i className="fas fa-percent text-purple-500"></i>Tax Configuration</h3>
+        <div className="flex items-center justify-between p-3 rounded-lg bg-gray-50">
+          <div>
+            <p className="text-xs font-bold text-gray-700">Enable Tax (VAT)</p>
+            <p className="text-[10px] text-gray-400">Add tax to order totals and receipts</p>
+          </div>
+          <button
+            onClick={() => setLocalTaxConfig({ ...localTaxConfig, enabled: !localTaxConfig.enabled })}
+            className={`w-10 h-5 rounded-full transition-all ${localTaxConfig.enabled ? 'bg-purple-500' : 'bg-gray-300'}`}
+          >
+            <div className={`w-4 h-4 rounded-full bg-white shadow transition-transform ${localTaxConfig.enabled ? 'translate-x-5' : 'translate-x-0.5'}`}></div>
+          </button>
+        </div>
+        {localTaxConfig.enabled && (
+          <>
+            <div>
+              <label className="text-xs font-bold text-gray-700 mb-1 block">Tax Name</label>
+              <input
+                type="text"
+                value={localTaxConfig.name}
+                onChange={(e) => setLocalTaxConfig({ ...localTaxConfig, name: e.target.value })}
+                placeholder="e.g., VAT, GST, Tax"
+                className="w-full px-3 py-2 rounded-lg border border-gray-200 focus:border-purple-400 focus:ring-2 focus:ring-purple-100 outline-none text-sm"
+              />
+            </div>
+            <div>
+              <label className="text-xs font-bold text-gray-700 mb-1 block">Tax Rate (%)</label>
+              <input
+                type="number"
+                min="0"
+                max="100"
+                step="0.1"
+                value={localTaxConfig.rate}
+                onChange={(e) => setLocalTaxConfig({ ...localTaxConfig, rate: parseFloat(e.target.value) || 0 })}
+                className="w-full px-3 py-2 rounded-lg border border-gray-200 focus:border-purple-400 focus:ring-2 focus:ring-purple-100 outline-none text-sm"
+              />
+              <p className="text-[10px] text-gray-400 mt-1">Tax rate as a percentage (e.g., 5 for 5%)</p>
+            </div>
+          </>
+        )}
+        <div className="p-3 rounded-lg bg-purple-50 border border-purple-200">
+          <div className="flex items-start gap-2">
+            <i className="fas fa-info-circle text-purple-500 mt-0.5"></i>
+            <div className="text-xs text-purple-700">
+              <p className="font-bold mb-1">Tax Info:</p>
+              <ul className="list-disc list-inside space-y-1 text-[10px]">
+                <li>When disabled, no tax is added to orders</li>
+                <li>When enabled, tax is calculated on subtotal</li>
+                <li>Tax appears on receipts only when enabled</li>
+                <li>Common rates: 5% (Oman VAT), 15% (Australia GST)</li>
               </ul>
             </div>
           </div>

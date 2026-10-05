@@ -16,6 +16,7 @@ const LINE_FEED = '\n';
 
 // Build ESC/POS receipt data
 function buildReceiptData(order: Order, branchInfo: { name: string; address: string; phone: string }): string {
+  const { taxConfig } = useStore.getState();
   const date = new Date(order.timestamp);
   let data = INIT;
 
@@ -55,7 +56,9 @@ function buildReceiptData(order: Order, branchInfo: { name: string; address: str
 
   // Totals
   data += 'Subtotal'.padEnd(24) + 'OMR ' + order.subtotal.toFixed(3) + LINE_FEED;
-  data += 'VAT (5%)'.padEnd(24) + 'OMR ' + order.tax.toFixed(3) + LINE_FEED;
+  if (taxConfig.enabled && order.tax > 0) {
+    data += (taxConfig.name + ' (' + taxConfig.rate + '%)').padEnd(24) + 'OMR ' + order.tax.toFixed(3) + LINE_FEED;
+  }
   data += '--------------------------------' + LINE_FEED;
   data += BOLD_ON;
   data += 'TOTAL'.padEnd(23) + 'OMR ' + order.total.toFixed(3) + LINE_FEED;

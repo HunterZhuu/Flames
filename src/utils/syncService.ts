@@ -1,6 +1,7 @@
 import { useStore, type Order, type PendingEmail } from '../store/store';
 
 export function generateReceiptHTML(order: Order, branchInfo: { name: string; address: string; phone: string }): string {
+  const { taxConfig } = useStore.getState();
   const date = new Date(order.timestamp);
   const itemsHTML = order.items.map(item => `
     <tr>
@@ -8,6 +9,10 @@ export function generateReceiptHTML(order: Order, branchInfo: { name: string; ad
       <td style="padding: 4px 0; font-size: 12px; text-align: right;">OMR ${(item.product.price * item.quantity).toFixed(3)}</td>
     </tr>
   `).join('');
+
+  const vatLine = taxConfig.enabled && order.tax > 0 
+    ? `<tr><td>${taxConfig.name} (${taxConfig.rate}%)</td><td style="text-align: right;">OMR ${order.tax.toFixed(3)}</td></tr>`
+    : '';
 
   return `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Receipt - ${order.id}</title></head>
 <body style="margin: 0; padding: 20px; font-family: 'Courier New', monospace; background: #f5f5f5;">
@@ -32,7 +37,7 @@ export function generateReceiptHTML(order: Order, branchInfo: { name: string; ad
     <div style="border-bottom: 1px dashed #ccc; padding-bottom: 10px; margin-bottom: 10px;">
       <table style="width: 100%; font-size: 12px;">
         <tr><td>Subtotal</td><td style="text-align: right;">OMR ${order.subtotal.toFixed(3)}</td></tr>
-        <tr><td>VAT (5%)</td><td style="text-align: right;">OMR ${order.tax.toFixed(3)}</td></tr>
+        ${vatLine}
         <tr style="font-size: 16px; font-weight: bold;">
           <td style="padding: 8px 0 3px 0; border-top: 2px solid #e53e3e;">TOTAL</td>
           <td style="padding: 8px 0 3px 0; border-top: 2px solid #e53e3e; text-align: right; color: #e53e3e;">OMR ${order.total.toFixed(3)}</td>
@@ -65,6 +70,7 @@ export function generateReceiptHTML(order: Order, branchInfo: { name: string; ad
 }
 
 export function generateThermalReceipt(order: Order, branchInfo: { name: string; address: string; phone: string }): string {
+  const { taxConfig } = useStore.getState();
   const date = new Date(order.timestamp);
   const line = '--------------------------------';
   const doubleLine = '================================';
@@ -89,7 +95,9 @@ export function generateThermalReceipt(order: Order, branchInfo: { name: string;
   
   receipt += `${line}\n`;
   receipt += `Subtotal${' '.repeat(20)}OMR ${order.subtotal.toFixed(3)}\n`;
-  receipt += `VAT (5%)${' '.repeat(20)}OMR ${order.tax.toFixed(3)}\n`;
+  if (taxConfig.enabled && order.tax > 0) {
+    receipt += `${taxConfig.name} (${taxConfig.rate}%)${' '.repeat(20 - taxConfig.name.length - 6)}OMR ${order.tax.toFixed(3)}\n`;
+  }
   receipt += `${line}\n`;
   receipt += `TOTAL${' '.repeat(21)}OMR ${order.total.toFixed(3)}\n`;
   receipt += `${doubleLine}\n`;

@@ -12,7 +12,7 @@ export default function POSScreen() {
     orderType, setOrderType, tableNumber, setTableNumber,
     completeOrder, getCartSubtotal, getCartTax, getCartTotal,
     currentUser, menuOverrides, paymentMethods, customImages,
-    customMenuItems, removedMenuItems,
+    customMenuItems, removedMenuItems, taxConfig,
   } = useStore();
 
   const [activeCategory, setActiveCategory] = useState('all');
@@ -199,7 +199,9 @@ export default function POSScreen() {
         <div className="border-t border-gray-100 p-3 space-y-2 shrink-0">
           <div className="space-y-1">
             <div className="flex justify-between text-xs text-gray-500"><span>Subtotal</span><span>OMR {subtotal.toFixed(3)}</span></div>
-            <div className="flex justify-between text-xs text-gray-500"><span>VAT (5%)</span><span>OMR {tax.toFixed(3)}</span></div>
+            {taxConfig.enabled && (
+              <div className="flex justify-between text-xs text-gray-500"><span>{taxConfig.name} ({taxConfig.rate}%)</span><span>OMR {tax.toFixed(3)}</span></div>
+            )}
             <div className="flex justify-between text-base font-black text-gray-900 pt-1.5 border-t border-dashed border-gray-200"><span>Total</span><span className="text-orange-600">OMR {total.toFixed(3)}</span></div>
           </div>
           <button onClick={handleCheckout} disabled={cart.length === 0} className="w-full py-3 rounded-xl bg-gradient-to-r from-red-600 to-orange-500 text-white font-bold text-sm shadow-lg shadow-orange-200 hover:shadow-xl disabled:opacity-40 disabled:cursor-not-allowed transition-all active:scale-[0.98]">
@@ -274,7 +276,9 @@ export default function POSScreen() {
                 ))}
                 <div className="border-t border-dashed border-gray-300 my-2"></div>
                 <div className="flex justify-between text-[10px]"><span>Subtotal</span><span>OMR {lastOrder.subtotal.toFixed(3)}</span></div>
-                <div className="flex justify-between text-[10px]"><span>VAT (5%)</span><span>OMR {lastOrder.tax.toFixed(3)}</span></div>
+                {lastOrder.tax > 0 && (
+                  <div className="flex justify-between text-[10px]"><span>{taxConfig.name} ({taxConfig.rate}%)</span><span>OMR {lastOrder.tax.toFixed(3)}</span></div>
+                )}
                 <div className="flex justify-between font-bold text-xs mt-1"><span>TOTAL</span><span>OMR {lastOrder.total.toFixed(3)}</span></div>
                 <div className="border-t-2 border-red-500 my-2"></div>
                 <div className="bg-red-50 rounded-lg p-2 my-2">
