@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useStore } from '../store/store';
 import { getEffectiveMenu, categories } from '../data/menu';
 import { queueEmailForOrder } from '../utils/syncService';
-import { autoPrintReceipt } from '../utils/networkPrint';
+import { epsonPrinter } from '../utils/epsonDirectPrint';
 import CustomerDisplay from './CustomerDisplay';
 import toast from 'react-hot-toast';
 
@@ -79,14 +79,16 @@ export default function POSScreen() {
     const { printerConfig } = useStore.getState();
     if (printerConfig.autoPrintReceipt) {
       setTimeout(async () => {
-        const success = await autoPrintReceipt(order, 'customer');
-        if (success) {
+        const result = await epsonPrinter.printReceipt(order, 'customer');
+        if (result.success) {
           toast.success('Auto-printing customer receipt...', { icon: '🖨️', duration: 2000 });
+        } else {
+          toast.error('Print failed: ' + result.message);
         }
         if (printerConfig.autoPrintKitchen) {
           setTimeout(async () => {
-            const kitchenSuccess = await autoPrintReceipt(order, 'kitchen');
-            if (kitchenSuccess) {
+            const kitchenResult = await epsonPrinter.printReceipt(order, 'kitchen');
+            if (kitchenResult.success) {
               toast.success('Auto-printing kitchen ticket...', { icon: '🖨️', duration: 2000 });
             }
           }, 500);
@@ -329,21 +331,21 @@ export default function POSScreen() {
             <div className="p-4 border-t border-gray-100 space-y-2">
               <div className="grid grid-cols-2 gap-2">
                 <button onClick={async () => {
-                  const success = await autoPrintReceipt(lastOrder, 'customer');
-                  if (success) {
+                  const result = await epsonPrinter.printReceipt(lastOrder, 'customer');
+                  if (result.success) {
                     toast.success('Customer receipt sent to printer!', { icon: '🖨️' });
                   } else {
-                    toast.error('Print failed. Check printer connection.');
+                    toast.error('Print failed: ' + result.message);
                   }
                 }} className="py-2.5 rounded-xl bg-blue-600 text-white font-bold text-xs shadow-md hover:shadow-lg transition-all">
                   <i className="fas fa-print mr-1"></i> Customer Receipt
                 </button>
                 <button onClick={async () => {
-                  const success = await autoPrintReceipt(lastOrder, 'kitchen');
-                  if (success) {
+                  const result = await epsonPrinter.printReceipt(lastOrder, 'kitchen');
+                  if (result.success) {
                     toast.success('Kitchen ticket sent to printer!', { icon: '🖨️' });
                   } else {
-                    toast.error('Print failed. Check printer connection.');
+                    toast.error('Print failed: ' + result.message);
                   }
                 }} className="py-2.5 rounded-xl bg-amber-600 text-white font-bold text-xs shadow-md hover:shadow-lg transition-all">
                   <i className="fas fa-utensils mr-1"></i> Kitchen Copy
