@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { useStore } from '../store/store';
 import { getEffectiveMenu, categories } from '../data/menu';
-import { printReceipt, queueEmailForOrder } from '../utils/syncService';
+import { queueEmailForOrder } from '../utils/syncService';
+import { autoPrintReceipt } from '../utils/networkPrint';
 import CustomerDisplay from './CustomerDisplay';
 import toast from 'react-hot-toast';
 
@@ -77,14 +78,14 @@ export default function POSScreen() {
 
     const { printerConfig } = useStore.getState();
     if (printerConfig.autoPrintReceipt) {
-      setTimeout(() => {
-        const success = printReceipt(order, 'customer');
+      setTimeout(async () => {
+        const success = await autoPrintReceipt(order, 'customer');
         if (success) {
           toast.success('Auto-printing customer receipt...', { icon: '🖨️', duration: 2000 });
         }
         if (printerConfig.autoPrintKitchen) {
-          setTimeout(() => {
-            const kitchenSuccess = printReceipt(order, 'kitchen');
+          setTimeout(async () => {
+            const kitchenSuccess = await autoPrintReceipt(order, 'kitchen');
             if (kitchenSuccess) {
               toast.success('Auto-printing kitchen ticket...', { icon: '🖨️', duration: 2000 });
             }
@@ -303,22 +304,22 @@ export default function POSScreen() {
             </div>
             <div className="p-4 border-t border-gray-100 space-y-2">
               <div className="grid grid-cols-2 gap-2">
-                <button onClick={() => {
-                  const success = printReceipt(lastOrder, 'customer');
+                <button onClick={async () => {
+                  const success = await autoPrintReceipt(lastOrder, 'customer');
                   if (success) {
                     toast.success('Customer receipt sent to printer!', { icon: '🖨️' });
                   } else {
-                    toast.error('Print failed. Please allow popups for this site.');
+                    toast.error('Print failed. Check printer connection.');
                   }
                 }} className="py-2.5 rounded-xl bg-blue-600 text-white font-bold text-xs shadow-md hover:shadow-lg transition-all">
                   <i className="fas fa-print mr-1"></i> Customer Receipt
                 </button>
-                <button onClick={() => {
-                  const success = printReceipt(lastOrder, 'kitchen');
+                <button onClick={async () => {
+                  const success = await autoPrintReceipt(lastOrder, 'kitchen');
                   if (success) {
                     toast.success('Kitchen ticket sent to printer!', { icon: '🖨️' });
                   } else {
-                    toast.error('Print failed. Please allow popups for this site.');
+                    toast.error('Print failed. Check printer connection.');
                   }
                 }} className="py-2.5 rounded-xl bg-amber-600 text-white font-bold text-xs shadow-md hover:shadow-lg transition-all">
                   <i className="fas fa-utensils mr-1"></i> Kitchen Copy
