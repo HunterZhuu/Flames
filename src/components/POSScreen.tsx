@@ -12,7 +12,7 @@ export default function POSScreen() {
     orderType, setOrderType, tableNumber, setTableNumber,
     completeOrder, getCartSubtotal, getCartTax, getCartTotal,
     currentUser, menuOverrides, paymentMethods, customImages,
-    customMenuItems, removedMenuItems, taxConfig,
+    customMenuItems, removedMenuItems, taxConfig, updateTaxConfig,
   } = useStore();
 
   const [activeCategory, setActiveCategory] = useState('all');
@@ -204,6 +204,26 @@ export default function POSScreen() {
             )}
             <div className="flex justify-between text-base font-black text-gray-900 pt-1.5 border-t border-dashed border-gray-200"><span>Total</span><span className="text-orange-600">OMR {total.toFixed(3)}</span></div>
           </div>
+          
+          {/* VAT Toggle Button */}
+          <button
+            onClick={() => {
+              const newEnabled = !taxConfig.enabled;
+              updateTaxConfig({ enabled: newEnabled });
+              toast.success(newEnabled ? `${taxConfig.name} (${taxConfig.rate}%) added` : `${taxConfig.name} removed`, {
+                icon: newEnabled ? '💰' : '🚫',
+                duration: 1500,
+              });
+            }}
+            className={`w-full py-2 rounded-lg font-bold text-xs transition-all ${
+              taxConfig.enabled
+                ? 'bg-purple-100 text-purple-700 hover:bg-purple-200 border-2 border-purple-300'
+                : 'bg-gray-100 text-gray-600 hover:bg-gray-200 border-2 border-gray-200'
+            }`}
+          >
+            <i className={`fas ${taxConfig.enabled ? 'fa-check-circle' : 'fa-plus-circle'} mr-1`}></i>
+            {taxConfig.enabled ? `Remove ${taxConfig.name} (${taxConfig.rate}%)` : `Add ${taxConfig.name} (${taxConfig.rate}%)`}
+          </button>
           <button onClick={handleCheckout} disabled={cart.length === 0} className="w-full py-3 rounded-xl bg-gradient-to-r from-red-600 to-orange-500 text-white font-bold text-sm shadow-lg shadow-orange-200 hover:shadow-xl disabled:opacity-40 disabled:cursor-not-allowed transition-all active:scale-[0.98]">
             <i className="fas fa-credit-card mr-2"></i>Charge OMR {total.toFixed(3)}
           </button>
