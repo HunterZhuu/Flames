@@ -1,0 +1,127 @@
+// Flames Burgers & More - Complete Menu Data
+// All prices in OMR (Omani Rial) - 3 decimal places
+
+export interface MenuItem {
+  id: string;
+  name: string;
+  description: string;
+  price: number;
+  category: string;
+  emoji: string;
+  color: string;
+  available: boolean;
+  image?: string;
+}
+
+export interface Category {
+  id: string;
+  name: string;
+  emoji: string;
+}
+
+export const categories: Category[] = [
+  { id: 'all', name: 'All', emoji: '🔥' },
+  { id: 'burgers', name: 'Burgers', emoji: '🍔' },
+  { id: 'sandwiches', name: 'Sandwiches', emoji: '🥪' },
+  { id: 'sliders', name: 'Sliders', emoji: '🍔' },
+  { id: 'appetizers', name: 'Appetizers', emoji: '🍤' },
+  { id: 'pasta', name: 'Pasta', emoji: '🍝' },
+  { id: 'mishkak', name: 'Mishkak', emoji: '🍢' },
+  { id: 'salads', name: 'Salads', emoji: '🥗' },
+  { id: 'fries', name: 'French Fries', emoji: '🍟' },
+  { id: 'gathering', name: 'Gathering Box', emoji: '📦' },
+  { id: 'drinks', name: 'Drinks', emoji: '🥤' },
+  { id: 'extras', name: 'Extras', emoji: '✨' },
+  { id: 'gutech', name: 'GUTech Event', emoji: '🎓' },
+];
+
+// Helper function to get effective menu (base + custom - removed)
+export const getEffectiveMenu = (
+  customItems: MenuItem[],
+  removedIds: string[]
+): MenuItem[] => {
+  const baseItems = menuItems.filter(item => !removedIds.includes(item.id));
+  return [...baseItems, ...customItems];
+};
+
+// Complete Flames Menu - Prices from Talabat Oman
+export const menuItems: MenuItem[] = [
+  // BURGERS
+  { id: 'burger-01', name: 'Classic Beef Burger', description: 'Juicy smashed beef patty, melted cheese, crispy onion rings, fresh lettuce, and our classic sauce.', price: 2.100, category: 'burgers', emoji: '🍔', color: 'from-red-400 to-red-600', available: true },
+  { id: 'burger-02', name: 'Signature Beef Burger', description: 'Fresh beef burger with cheese slice, beetroot sauce, fresh tomato slice and lettuce.', price: 2.100, category: 'burgers', emoji: '🍔', color: 'from-red-400 to-red-600', available: true, image: 'https://image.qwenlm.ai/generated-images/db27ea65-4b80-4ee0-8cc4-e7ff601a2cd6/_result.png' },
+  { id: 'burger-03', name: 'Grilled Chicken Burger', description: 'Grilled chicken with fresh lettuce, a slice of cheese, dynamite sauce and a slice of tomato.', price: 1.900, category: 'burgers', emoji: '🍗', color: 'from-yellow-400 to-orange-500', available: true },
+  { id: 'burger-04', name: 'Crunchy Chicken Burger', description: 'Crispy chicken, cheese slice with tomato, fresh lettuce, jalapeno slices and classic sauce.', price: 2.100, category: 'burgers', emoji: '🍗', color: 'from-amber-400 to-amber-600', available: true, image: 'https://image.qwenlm.ai/generated-images/08dbd742-f4e4-4643-b7f4-5acbc73737db/_result.png' },
+  { id: 'burger-05', name: 'Smoked Burger', description: 'Bacon, american lettuce, jalapeno, cheese slice and beetroot sauce.', price: 2.100, category: 'burgers', emoji: '🔥', color: 'from-gray-600 to-gray-800', available: true },
+  { id: 'burger-06', name: 'Crunchy Cheetos Burger', description: 'Crispy chicken patty, Cheetos, cheese, lettuce, tomato, and a signature sauce.', price: 2.100, category: 'burgers', emoji: '🧀', color: 'from-orange-500 to-red-500', available: true },
+  { id: 'burger-07', name: 'Smoke House Burger', description: 'BBQ beef.', price: 2.100, category: 'burgers', emoji: '🏠', color: 'from-red-600 to-red-800', available: true },
+  { id: 'burger-08', name: 'Steak Bom Burger', description: 'Grilled steak with fresh bbq, lettuce, toasted onion rings and american cheese.', price: 1.900, category: 'burgers', emoji: '🥩', color: 'from-orange-400 to-red-500', available: true },
+  { id: 'burger-09', name: 'Smash Burger', description: 'Ground beef, salt, black pepper, American cheese, bun.', price: 1.900, category: 'burgers', emoji: '💥', color: 'from-amber-500 to-amber-700', available: true },
+  { id: 'burger-10', name: 'Pomme Rocca Burger', description: 'Beef patty with fresh rocca, crispy potato sticks, a slice of cheese, tomato, and a signature sauce.', price: 2.100, category: 'burgers', emoji: '🥬', color: 'from-green-400 to-green-600', available: true },
+
+  // SANDWICHES
+  { id: 'sandwich-01', name: 'Philly Steak Sandwich', description: 'Sandwich with thinly sliced beef and cheese.', price: 1.950, category: 'sandwiches', emoji: '🥪', color: 'from-amber-300 to-amber-500', available: true, image: 'https://image.qwenlm.ai/generated-images/c4aff175-4efb-48e3-8edd-7680d9677357/_result.png' },
+
+  // SLIDERS
+  { id: 'slider-01', name: 'Signature Beef Slider', description: 'Fresh beef burger with cheese slice, beetroot sauce, fresh tomato slice and lettuce.', price: 1.300, category: 'sliders', emoji: '🍔', color: 'from-red-300 to-red-500', available: true },
+  { id: 'slider-02', name: 'Grilled Chicken Slider', description: 'Grilled chicken with fresh lettuce, a slice of cheese, dynamite sauce and a slice of tomato.', price: 1.300, category: 'sliders', emoji: '🍗', color: 'from-yellow-300 to-yellow-500', available: true },
+  { id: 'slider-03', name: 'Crunchy Chicken Slider', description: 'Crispy chicken, cheese slice with tomato, fresh lettuce, jalapeno slices and classic sauce.', price: 1.300, category: 'sliders', emoji: '🍔', color: 'from-orange-300 to-orange-500', available: true },
+
+  // APPETIZERS
+  { id: 'app-01', name: 'Jolly Shrimp', description: 'Breaded Crispy Fried Shrimp, Glazed In Our Jolly Sauce And Garnished With Sesame Seed And Spring Onion.', price: 2.500, category: 'appetizers', emoji: '🍤', color: 'from-pink-400 to-pink-600', available: true, image: 'https://image.qwenlm.ai/generated-images/2ee85d43-5dae-4c14-b42f-f0b1c642edd7/_result.png' },
+  { id: 'app-02', name: 'Dynamite Shrimp', description: 'Made crispy, golden-fried shrimp coated in a spicy mayo sauce for a tantalizing treat.', price: 2.700, category: 'appetizers', emoji: '🍤', color: 'from-red-400 to-orange-500', available: true },
+  { id: 'app-03', name: 'Flaming Shrimp', description: 'Crispy shrimp with special flaming sauce.', price: 2.200, category: 'appetizers', emoji: '🔥', color: 'from-orange-500 to-red-600', available: true },
+  { id: 'app-04', name: 'Chicken Honey Pops', description: 'Chicken pops with special honey sauce.', price: 1.880, category: 'appetizers', emoji: '🍯', color: 'from-yellow-300 to-amber-500', available: true },
+
+  // PASTA
+  { id: 'pasta-01', name: 'Flames Mac And Cheese', description: 'Mac and cheese with special white sauce topped with red Cheetos.', price: 2.100, category: 'pasta', emoji: '🧀', color: 'from-yellow-300 to-yellow-500', available: true },
+  { id: 'pasta-02', name: 'Flames Pinky Pasta', description: 'Pasta, chicken, tomatoes, cream pink sauce, butter, garlic, onion, salt, pepper.', price: 2.200, category: 'pasta', emoji: '🍝', color: 'from-pink-300 to-pink-500', available: true, image: 'https://image.qwenlm.ai/generated-images/a5541dcf-8ee7-42c4-b41e-ca97b03106ea/_result.png' },
+  { id: 'pasta-03', name: 'Alfredo Pasta', description: 'Creamy pasta dish made with Alfredo sauce.', price: 2.200, category: 'pasta', emoji: '🍝', color: 'from-amber-100 to-amber-300', available: true },
+  { id: 'pasta-04', name: 'Doro Chicken Pasta', description: 'Chicken penne pasta made with our tasty pomodoro sauce, grilled chicken, mushrooms, capsicum, mozzarella cheese, parmesan cheese and garnished with parsley.', price: 1.900, category: 'pasta', emoji: '🍝', color: 'from-red-300 to-red-400', available: true },
+
+  // MISHKAK
+  { id: 'mishkak-01', name: 'Beef Mishkak', description: '3 skewers of beef with sauce.', price: 1.200, category: 'mishkak', emoji: '🍢', color: 'from-red-400 to-red-600', available: true },
+  { id: 'mishkak-02', name: 'Chicken Mishkak', description: '3 skewers of chicken + sauce.', price: 1.200, category: 'mishkak', emoji: '🍢', color: 'from-amber-400 to-amber-600', available: true, image: 'https://image.qwenlm.ai/generated-images/8406f95f-28ce-4686-ae0c-092f915094a6/_result.png' },
+
+  // SALADS
+  { id: 'salad-01', name: 'Caesar Salad', description: 'Made with crisp romaine lettuce, croutons, parmesan cheese, and Caesar dressing.', price: 1.800, category: 'salads', emoji: '🥗', color: 'from-green-300 to-green-500', available: true, image: 'https://image.qwenlm.ai/generated-images/4b2f1348-1949-46d4-9d68-249d9bd42e39/_result.png' },
+  { id: 'salad-02', name: 'Rocca Salad', description: 'Made with a combination of fresh arugula, parmesan cheese, and other toppings.', price: 2.200, category: 'salads', emoji: '🥗', color: 'from-emerald-300 to-emerald-500', available: true },
+
+  // FRENCH FRIES
+  { id: 'fries-01', name: 'Flames Original French Fries', description: 'French fries topped with flames sauce, jalapeño, melted cheese, and fresh onions.', price: 0.900, category: 'fries', emoji: '🍟', color: 'from-yellow-300 to-yellow-500', available: true, image: 'https://image.qwenlm.ai/generated-images/6293297f-cc59-4a70-9c89-0720df3c2a01/_result.png' },
+  { id: 'fries-02', name: 'Flames Cheese French Fries', description: 'French fries topped with melted cheese, Flames sauce, jalapeño, and fresh onions.', price: 1.100, category: 'fries', emoji: '🧀', color: 'from-yellow-400 to-orange-400', available: true },
+  { id: 'fries-03', name: 'Dynamite Chicken French Fries', description: 'Chicken with french fries, jalapeño, melted cheese and flames sauce with fresh onions.', price: 2.700, category: 'fries', emoji: '🍟', color: 'from-red-300 to-red-500', available: true },
+  { id: 'fries-04', name: 'Classic Dynamite French Fries', description: 'Minced meat with french fries, jalapeño, melted cheese and flames sauce with fresh onions.', price: 2.700, category: 'fries', emoji: '🍟', color: 'from-red-400 to-red-600', available: true },
+  { id: 'fries-05', name: 'Crispy Chicken Dynamite French Fries', description: 'Crispy Chicken with french fries, jalapeño, melted cheese and flames sauce with fresh onions.', price: 2.700, category: 'fries', emoji: '🍟', color: 'from-orange-400 to-red-400', available: true },
+  { id: 'fries-06', name: 'Dynamite Beef French Fries', description: 'Beef with french fries, jalapeño, melted cheese and flames sauce with fresh onions.', price: 2.700, category: 'fries', emoji: '🍟', color: 'from-red-500 to-red-700', available: true },
+
+  // GATHERING BOX
+  { id: 'gather-01', name: 'Slider Box', description: '4 Slider burger with fries added to the American cheese.', price: 3.500, category: 'gathering', emoji: '📦', color: 'from-purple-400 to-purple-600', available: true, image: 'https://image.qwenlm.ai/generated-images/36ab76b4-ff2f-4525-8900-4b7bc7132beb/_result.png' },
+  { id: 'gather-02', name: 'Duetto Box', description: '2 burger, French fries, beetroot sauce.', price: 3.500, category: 'gathering', emoji: '📦', color: 'from-indigo-400 to-indigo-600', available: true },
+
+  // DRINKS
+  { id: 'drink-01', name: 'Orange Juice', description: 'Made capturing all the natural sweetness and tangy citrus flavor. Packed with Vitamin C.', price: 1.500, category: 'drinks', emoji: '🍊', color: 'from-orange-400 to-orange-600', available: true },
+  { id: 'drink-02', name: 'Kinza Orange', description: 'Water, sugar, orange juice, citric acid, orange color, orange flavor.', price: 0.400, category: 'drinks', emoji: '🍊', color: 'from-orange-300 to-orange-500', available: true },
+  { id: 'drink-03', name: 'Kinza Cola', description: 'Carbonated soft drink.', price: 0.400, category: 'drinks', emoji: '🥤', color: 'from-gray-600 to-gray-800', available: true },
+  { id: 'drink-04', name: 'Kinza Lemon', description: 'A popular carbonated lemon-lime flavored soft drink.', price: 0.400, category: 'drinks', emoji: '🍋', color: 'from-yellow-200 to-yellow-400', available: true },
+  { id: 'drink-05', name: 'Small Water', description: 'Stay hydrated and refreshed with our water.', price: 0.200, category: 'drinks', emoji: '💧', color: 'from-blue-200 to-blue-400', available: true },
+  { id: 'drink-06', name: 'Blueberry Mojito', description: 'Blueberry, blackberry, lemon and mint.', price: 1.500, category: 'drinks', emoji: '🫐', color: 'from-blue-400 to-purple-500', available: true },
+  { id: 'drink-07', name: 'Passion Mojito', description: 'Indulge in the tropical and tangy taste of our Passion Mojito.', price: 1.400, category: 'drinks', emoji: '🍹', color: 'from-yellow-300 to-pink-400', available: true },
+  { id: 'drink-08', name: 'Lucy Mojito', description: 'A refreshing drink made with lime, mint, and soda water.', price: 1.400, category: 'drinks', emoji: '🍃', color: 'from-green-300 to-green-500', available: true },
+  { id: 'drink-09', name: 'Mojito', description: 'Strawberry, mint, lemon and 7up.', price: 1.400, category: 'drinks', emoji: '🍓', color: 'from-red-300 to-pink-400', available: true, image: 'https://image.qwenlm.ai/generated-images/8f75e5a0-39dc-4fe8-a6f1-558fb89fc747/_result.png' },
+
+  // EXTRAS
+  { id: 'extra-01', name: 'Extra Beef Bacon', description: 'Enjoy the taste of crispy bacon with your special burger.', price: 0.500, category: 'extras', emoji: '🥓', color: 'from-red-300 to-red-500', available: true },
+  { id: 'extra-02', name: 'Extra Patty', description: 'Add an extra piece of meat.', price: 0.700, category: 'extras', emoji: '🥩', color: 'from-red-400 to-red-600', available: true },
+  { id: 'extra-03', name: 'Extra Classic Sauce', description: 'A side serving of the classic sauce.', price: 0.400, category: 'extras', emoji: '🫙', color: 'from-amber-300 to-amber-500', available: true },
+  { id: 'extra-04', name: 'Extra Chicken Skewer Mishkak', description: 'A skewer of grilled chicken pieces.', price: 0.400, category: 'extras', emoji: '🍢', color: 'from-amber-400 to-amber-600', available: true },
+  { id: 'extra-05', name: 'Extra Beef Mishkak Skewer', description: 'Marinated grilled beef skewer.', price: 0.400, category: 'extras', emoji: '🍢', color: 'from-red-300 to-red-500', available: true },
+
+  // GUTECH EVENT MENU
+  { id: 'gutech-01', name: 'Classic Beef Burger', description: 'Juicy smashed beef patty, melted cheese, crispy onion rings, fresh lettuce, and our classic sauce.', price: 2.200, category: 'gutech', emoji: '🍔', color: 'from-red-400 to-red-600', available: true, image: 'https://image.qwenlm.ai/generated-images/50f53f23-5a01-4f24-a049-2a6a64764305/_result.png' },
+  { id: 'gutech-02', name: 'Smash Burger', description: 'Juicy smashed beef patty, double melted cheese, fresh lettuce.', price: 1.900, category: 'gutech', emoji: '🍔', color: 'from-amber-400 to-amber-600', available: true, image: 'https://image.qwenlm.ai/generated-images/bc0e7f3b-7d4c-4dc0-8fb9-60df52497c31/_result.png' },
+  { id: 'gutech-03', name: 'Snickers Chicken Burger', description: 'Crispy fried chicken, melted cheese, fresh lettuce, jalapeños and creamy classic sauce with cheeses crunch.', price: 2.200, category: 'gutech', emoji: '🍗', color: 'from-orange-400 to-red-500', available: true, image: 'https://image.qwenlm.ai/generated-images/d2413e42-6e23-49a3-9f2a-6b1941d3691c/_result.png' },
+  { id: 'gutech-04', name: 'Crunchy Chicken Burger', description: 'Crispy fried chicken, melted cheese, fresh lettuce, jalapeños, and creamy classic sauce.', price: 1.900, category: 'gutech', emoji: '🍗', color: 'from-yellow-400 to-orange-500', available: true, image: 'https://image.qwenlm.ai/generated-images/c21de606-0c4b-496d-a192-b9ff51523dbd/_result.png' },
+  { id: 'gutech-05', name: 'Classic Beef Dynamite French Fries', description: 'Fries topped with seasoned ground beef, creamy classic sauce, jalapeños, and fresh green onions.', price: 2.300, category: 'gutech', emoji: '🍟', color: 'from-red-300 to-red-500', available: true, image: 'https://image.qwenlm.ai/generated-images/30c63bea-9596-49ab-9e4f-92c913de6ca4/_result.png' },
+  { id: 'gutech-06', name: 'Crispy Chicken Dynamite Fries', description: 'Fries topped with crispy chicken and our creamy classic sauce, melted cheese, jalapeños, and fresh green onions.', price: 2.300, category: 'gutech', emoji: '🍟', color: 'from-orange-400 to-red-400', available: true, image: 'https://image.qwenlm.ai/generated-images/7cec0639-ff09-4771-aa82-450745c47abf/_result.png' },
+  { id: 'gutech-07', name: 'Mac & Cheese Pasta', description: 'Creamy, cheesy pasta topped with spicy Cheetos crunch for the perfect combination of creaminess and crunch.', price: 2.000, category: 'gutech', emoji: '🍝', color: 'from-yellow-300 to-yellow-500', available: true, image: 'https://image.qwenlm.ai/generated-images/75c5706b-6bc4-4f9e-9d3f-549260c7e54f/_result.png' },
+];

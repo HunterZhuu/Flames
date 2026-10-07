@@ -1,0 +1,505 @@
+import { create } from 'zustand';
+import { persist } from 'zustand/middleware';
+import type { MenuItem } from '../data/menu';
+
+// Types
+export interface CartItem {
+  product: MenuItem;
+  quantity: number;
+  notes?: string;
+}
+
+export interface Order {
+  id: string;
+  items: CartItem[];
+  subtotal: number;
+  tax: number;
+  total: number;
+  paymentMethod: string;
+  cashTendered?: number;
+  change?: number;
+  cashier: string;
+  timestamp: number;
+  orderType: 'dine-in' | 'takeaway' | 'delivery';
+  tableNumber?: string;
+  status: 'completed' | 'refunded';
+}
+
+export interface StaffPermissions {
+  canProcessOrders: boolean;
+  canRefund: boolean;
+  canViewReports: boolean;
+  canManageStaff: boolean;
+  canEditMenu: boolean;
+  canViewAllOrders: boolean;
+  canPrintReceipts: boolean;
+  canApplyDiscounts: boolean;
+  allowedCategories: string[];
+}
+
+export interface StaffMember {
+  id: string;
+  name: string;
+  pin: string;
+  role: 'admin' | 'manager' | 'cashier' | 'kitchen';
+  active: boolean;
+  permissions: StaffPermissions;
+  createdAt: number;
+}
+
+export interface EmailConfig {
+  enabled: boolean;
+  recipientEmail: string;
+  branchName: string;
+  branchAddress: string;
+  branchPhone: string;
+  autoSyncOnConnect: boolean;
+}
+
+export interface PrinterDevice {
+  id: string;
+  name: string;
+  type: 'thermal' | 'impact' | 'laser' | 'inkjet';
+  model: string;
+  connectionType: 'wifi' | 'lan' | 'usb' | 'bluetooth';
+  ipAddress: string;
+  port: number;
+  subnetMask: string;
+  gateway: string;
+  enabled: boolean;
+  isDefault: boolean;
+}
+
+export interface PrinterConfig {
+  autoPrintReceipt: boolean;
+  autoPrintKitchen: boolean;
+  printDelay: number;
+  printers: PrinterDevice[];
+  networkConfig: {
+    ipadIP: string;
+    subnetMask: string;
+    gateway: string;
+  };
+}
+
+export interface TaxConfig {
+  enabled: boolean;
+  rate: number; // percentage (e.g., 5 for 5%)
+  name: string; // e.g., "VAT"
+}
+
+export interface PaymentMethod {
+  id: string;
+  name: string;
+  icon: string;
+  enabled: boolean;
+  color: string;
+  sortOrder: number;
+}
+
+export interface PendingEmail {
+  id: string;
+  orderId: string;
+  recipientEmail: string;
+  orderData: Order;
+  createdAt: number;
+  attempts: number;
+  lastAttempt?: number;
+  status: 'pending' | 'sending' | 'sent' | 'failed';
+}
+
+export const defaultPermissions: Record<StaffMember['role'], StaffPermissions> = {
+  admin: { canProcessOrders: true, canRefund: true, canViewReports: true, canManageStaff: true, canEditMenu: true, canViewAllOrders: true, canPrintReceipts: true, canApplyDiscounts: true, allowedCategories: [] },
+  manager: { canProcessOrders: true, canRefund: true, canViewReports: true, canManageStaff: false, canEditMenu: true, canViewAllOrders: true, canPrintReceipts: true, canApplyDiscounts: true, allowedCategories: [] },
+  cashier: { canProcessOrders: true, canRefund: false, canViewReports: false, canManageStaff: false, canEditMenu: false, canViewAllOrders: false, canPrintReceipts: true, canApplyDiscounts: false, allowedCategories: [] },
+  kitchen: { canProcessOrders: false, canRefund: false, canViewReports: false, canManageStaff: false, canEditMenu: false, canViewAllOrders: true, canPrintReceipts: false, canApplyDiscounts: false, allowedCategories: [] },
+};
+
+interface AppState {
+  // Auth
+  currentUser: StaffMember | null;
+  isLoggedIn: boolean;
+  
+  // Cart
+  cart: CartItem[];
+  orderType: 'dine-in' | 'takeaway' | 'delivery';
+  tableNumber: string;
+  
+  // Orders
+  orders: Order[];
+  
+  // Staff
+  staff: StaffMember[];
+  
+  // Menu
+  menuOverrides: Record<string, boolean>;
+  customMenuItems: MenuItem[];
+  removedMenuItems: string[];
+  customImages: Record<string, string>;
+  
+  // Email & Sync
+  emailConfig: EmailConfig;
+  pendingEmails: PendingEmail[];
+  
+  // Printer
+  printerConfig: PrinterConfig;
+  
+  // Tax
+  taxConfig: TaxConfig;
+  
+  // Payment
+  paymentMethods: PaymentMethod[];
+  
+  // Actions
+  login: (pin: string) => boolean;
+  logout: () => void;
+  addToCart: (item: MenuItem) => void;
+  removeFromCart: (itemId: string) => void;
+  updateCartQuantity: (itemId: string, qty: number) => void;
+  clearCart: () => void;
+  setOrderType: (type: 'dine-in' | 'takeaway' | 'delivery') => void;
+  setTableNumber: (num: string) => void;
+  completeOrder: (paymentMethod: string, cashTendered?: number, change?: number) => Order;
+  refundOrder: (orderId: string) => void;
+  addStaff: (member: Omit<StaffMember, 'id' | 'createdAt'>) => void;
+  updateStaff: (id: string, updates: Partial<StaffMember>) => void;
+  removeStaff: (id: string) => void;
+  toggleMenuItem: (itemId: string) => void;
+  addMenuItem: (item: MenuItem) => void;
+  removeMenuItem: (itemId: string) => void;
+  restoreMenuItem: (itemId: string) => void;
+  setCustomImage: (itemId: string, imageBase64: string) => void;
+  removeCustomImage: (itemId: string) => void;
+  updateEmailConfig: (config: Partial<EmailConfig>) => void;
+  updatePrinterConfig: (config: Partial<PrinterConfig>) => void;
+  updateTaxConfig: (config: Partial<TaxConfig>) => void;
+  addPrinter: (printer: PrinterDevice) => void;
+  updatePrinter: (id: string, updates: Partial<PrinterDevice>) => void;
+  removePrinter: (id: string) => void;
+  setDefaultPrinter: (id: string) => void;
+  updateNetworkConfig: (config: Partial<PrinterConfig['networkConfig']>) => void;
+  addPendingEmail: (email: PendingEmail) => void;
+  updatePendingEmail: (id: string, updates: Partial<PendingEmail>) => void;
+  removePendingEmail: (id: string) => void;
+  clearSentEmails: () => void;
+  addPaymentMethod: (method: PaymentMethod) => void;
+  updatePaymentMethod: (id: string, updates: Partial<PaymentMethod>) => void;
+  removePaymentMethod: (id: string) => void;
+  togglePaymentMethod: (id: string) => void;
+  resetData: () => void;
+  getCartSubtotal: () => number;
+  getCartTax: () => number;
+  getCartTotal: () => number;
+}
+
+const defaultAdmin: StaffMember = {
+  id: 'admin-001',
+  name: 'Admin',
+  pin: '1234',
+  role: 'admin',
+  active: true,
+  permissions: defaultPermissions.admin,
+  createdAt: Date.now(),
+};
+
+export const useStore = create<AppState>()(
+  persist(
+    (set, get) => ({
+      currentUser: null,
+      isLoggedIn: false,
+      cart: [],
+      orderType: 'takeaway',
+      tableNumber: '',
+      orders: [],
+      staff: [defaultAdmin],
+      menuOverrides: {},
+      customMenuItems: [],
+      removedMenuItems: [],
+      customImages: {},
+      emailConfig: {
+        enabled: false,
+        recipientEmail: '',
+        branchName: 'FLAMES BURGERS & MORE',
+        branchAddress: 'Barka, Oman',
+        branchPhone: '92809445',
+        autoSyncOnConnect: true,
+      },
+      pendingEmails: [],
+      printerConfig: {
+        autoPrintReceipt: true,
+        autoPrintKitchen: false,
+        printDelay: 1500,
+        printers: [
+          {
+            id: 'epson-m362a',
+            name: 'EPSON TM-m30II (M362A)',
+            type: 'thermal',
+            model: 'TM-m30II',
+            connectionType: 'lan',
+            ipAddress: '192.168.8.108',
+            port: 9100,
+            subnetMask: '255.255.255.0',
+            gateway: '192.168.8.1',
+            enabled: true,
+            isDefault: true,
+          },
+        ],
+        networkConfig: {
+          ipadIP: '192.168.8.100',
+          subnetMask: '255.255.255.0',
+          gateway: '192.168.8.1',
+        },
+      },
+      taxConfig: {
+        enabled: false, // VAT disabled by default
+        rate: 5,
+        name: 'VAT',
+      },
+      paymentMethods: [
+        { id: 'cash', name: 'Cash', icon: 'fa-money-bill-wave', enabled: true, color: 'green', sortOrder: 1 },
+        { id: 'card', name: 'Card', icon: 'fa-credit-card', enabled: true, color: 'blue', sortOrder: 2 },
+        { id: 'applepay', name: 'Apple Pay', icon: 'fa-apple', enabled: true, color: 'gray', sortOrder: 3 },
+        { id: 'googlepay', name: 'Google Pay', icon: 'fa-google', enabled: true, color: 'yellow', sortOrder: 4 },
+        { id: 'thawani', name: 'Thawani', icon: 'fa-wallet', enabled: true, color: 'purple', sortOrder: 5 },
+      ],
+
+      login: (pin: string) => {
+        const user = get().staff.find(s => s.pin === pin && s.active);
+        if (user) {
+          set({ currentUser: user, isLoggedIn: true });
+          return true;
+        }
+        return false;
+      },
+
+      logout: () => {
+        set({ currentUser: null, isLoggedIn: false, cart: [], orderType: 'takeaway', tableNumber: '' });
+      },
+
+      addToCart: (item: MenuItem) => {
+        const existing = get().cart.find(c => c.product.id === item.id);
+        if (existing) {
+          set({ cart: get().cart.map(c => c.product.id === item.id ? { ...c, quantity: c.quantity + 1 } : c) });
+        } else {
+          set({ cart: [...get().cart, { product: item, quantity: 1 }] });
+        }
+      },
+
+      removeFromCart: (itemId: string) => {
+        set({ cart: get().cart.filter(c => c.product.id !== itemId) });
+      },
+
+      updateCartQuantity: (itemId: string, qty: number) => {
+        if (qty <= 0) {
+          set({ cart: get().cart.filter(c => c.product.id !== itemId) });
+        } else {
+          set({ cart: get().cart.map(c => c.product.id === itemId ? { ...c, quantity: qty } : c) });
+        }
+      },
+
+      clearCart: () => set({ cart: [] }),
+      setOrderType: (type) => set({ orderType: type }),
+      setTableNumber: (num) => set({ tableNumber: num }),
+
+      completeOrder: (paymentMethod: string, cashTendered?: number, change?: number) => {
+        const state = get();
+        const subtotal = state.getCartSubtotal();
+        const tax = state.getCartTax();
+        const total = state.getCartTotal();
+        
+        const order: Order = {
+          id: `FLM-${Date.now().toString(36).toUpperCase()}`,
+          items: [...state.cart],
+          subtotal, tax, total, paymentMethod,
+          cashTendered: paymentMethod === 'cash' ? cashTendered : undefined,
+          change: paymentMethod === 'cash' && change ? change : undefined,
+          cashier: state.currentUser?.name || 'Unknown',
+          timestamp: Date.now(),
+          orderType: state.orderType,
+          tableNumber: state.tableNumber,
+          status: 'completed',
+        };
+
+        set({ orders: [order, ...state.orders], cart: [], tableNumber: '' });
+        return order;
+      },
+
+      refundOrder: (orderId: string) => {
+        set({ orders: get().orders.map(o => o.id === orderId ? { ...o, status: 'refunded' as const } : o) });
+      },
+
+      addStaff: (member) => {
+        set({ staff: [...get().staff, { ...member, id: `staff-${Date.now()}`, createdAt: Date.now() }] });
+      },
+
+      updateStaff: (id, updates) => {
+        set({ staff: get().staff.map(s => s.id === id ? { ...s, ...updates } : s) });
+      },
+
+      removeStaff: (id) => {
+        set({ staff: get().staff.filter(s => s.id !== id) });
+      },
+
+      toggleMenuItem: (itemId) => {
+        const overrides = { ...get().menuOverrides };
+        overrides[itemId] = !overrides[itemId];
+        set({ menuOverrides: overrides });
+      },
+
+      addMenuItem: (item) => set({ customMenuItems: [...get().customMenuItems, item] }),
+      removeMenuItem: (itemId) => set({ removedMenuItems: [...get().removedMenuItems, itemId] }),
+      restoreMenuItem: (itemId) => set({ removedMenuItems: get().removedMenuItems.filter(id => id !== itemId) }),
+
+      setCustomImage: (itemId, imageBase64) => {
+        set({ customImages: { ...get().customImages, [itemId]: imageBase64 } });
+      },
+
+      removeCustomImage: (itemId) => {
+        const { [itemId]: _, ...rest } = get().customImages;
+        set({ customImages: rest });
+      },
+
+      updateEmailConfig: (config) => set({ emailConfig: { ...get().emailConfig, ...config } }),
+      updatePrinterConfig: (config) => set({ printerConfig: { ...get().printerConfig, ...config } }),
+      updateTaxConfig: (config) => set({ taxConfig: { ...get().taxConfig, ...config } }),
+      
+      addPrinter: (printer) => {
+        set({ 
+          printerConfig: { 
+            ...get().printerConfig, 
+            printers: [...get().printerConfig.printers, printer] 
+          } 
+        });
+      },
+      
+      updatePrinter: (id, updates) => {
+        set({ 
+          printerConfig: { 
+            ...get().printerConfig, 
+            printers: get().printerConfig.printers.map(p => 
+              p.id === id ? { ...p, ...updates } : p
+            ) 
+          } 
+        });
+      },
+      
+      removePrinter: (id) => {
+        set({ 
+          printerConfig: { 
+            ...get().printerConfig, 
+            printers: get().printerConfig.printers.filter(p => p.id !== id) 
+          } 
+        });
+      },
+      
+      setDefaultPrinter: (id) => {
+        set({ 
+          printerConfig: { 
+            ...get().printerConfig, 
+            printers: get().printerConfig.printers.map(p => ({
+              ...p,
+              isDefault: p.id === id
+            }))
+          } 
+        });
+      },
+      
+      updateNetworkConfig: (config) => {
+        set({ 
+          printerConfig: { 
+            ...get().printerConfig, 
+            networkConfig: { ...get().printerConfig.networkConfig, ...config } 
+          } 
+        });
+      },
+
+      addPendingEmail: (email) => set({ pendingEmails: [...get().pendingEmails, email] }),
+      updatePendingEmail: (id, updates) => {
+        set({ pendingEmails: get().pendingEmails.map(e => e.id === id ? { ...e, ...updates } : e) });
+      },
+      removePendingEmail: (id) => set({ pendingEmails: get().pendingEmails.filter(e => e.id !== id) }),
+      clearSentEmails: () => set({ pendingEmails: get().pendingEmails.filter(e => e.status !== 'sent') }),
+
+      addPaymentMethod: (method) => set({ paymentMethods: [...get().paymentMethods, method] }),
+      updatePaymentMethod: (id, updates) => {
+        set({ paymentMethods: get().paymentMethods.map(pm => pm.id === id ? { ...pm, ...updates } : pm) });
+      },
+      removePaymentMethod: (id) => set({ paymentMethods: get().paymentMethods.filter(pm => pm.id !== id) }),
+      togglePaymentMethod: (id) => {
+        set({ paymentMethods: get().paymentMethods.map(pm => pm.id === id ? { ...pm, enabled: !pm.enabled } : pm) });
+      },
+
+      resetData: () => {
+        set({ orders: [], pendingEmails: [], customImages: {}, customMenuItems: [], removedMenuItems: [], menuOverrides: {}, cart: [] });
+      },
+
+      getCartSubtotal: () => get().cart.reduce((sum, item) => sum + item.product.price * item.quantity, 0),
+      getCartTax: () => {
+        const { taxConfig } = get();
+        if (!taxConfig.enabled) return 0;
+        return get().getCartSubtotal() * (taxConfig.rate / 100);
+      },
+      getCartTotal: () => get().getCartSubtotal() + get().getCartTax(),
+    }),
+    {
+      name: 'flames-epos-storage',
+      version: 3, // Increment version for tax config migration
+      migrate: (persistedState: any, version: number) => {
+        // Migration from version 0/1 to version 2
+        if (version < 2) {
+          // Ensure printerConfig has required fields
+          if (persistedState.printerConfig) {
+            if (!persistedState.printerConfig.networkConfig) {
+              persistedState.printerConfig.networkConfig = {
+                ipadIP: '192.168.8.100',
+                subnetMask: '255.255.255.0',
+                gateway: '192.168.8.1',
+              };
+            }
+            if (!persistedState.printerConfig.printers) {
+              persistedState.printerConfig.printers = [
+                {
+                  id: 'epson-m362a',
+                  name: 'EPSON TM-m30II (M362A)',
+                  type: 'thermal',
+                  model: 'TM-m30II',
+                  connectionType: 'lan',
+                  ipAddress: '192.168.8.108',
+                  port: 9100,
+                  subnetMask: '255.255.255.0',
+                  gateway: '192.168.8.1',
+                  enabled: true,
+                  isDefault: true,
+                },
+              ];
+            }
+          }
+        }
+        // Migration from version 2 to version 3 - Add tax config
+        if (version < 3) {
+          if (!persistedState.taxConfig) {
+            persistedState.taxConfig = {
+              enabled: false, // VAT disabled by default
+              rate: 5,
+              name: 'VAT',
+            };
+          }
+        }
+        return persistedState as AppState;
+      },
+      partialize: (state) => ({
+        orders: state.orders,
+        staff: state.staff,
+        menuOverrides: state.menuOverrides,
+        emailConfig: state.emailConfig,
+        pendingEmails: state.pendingEmails,
+        paymentMethods: state.paymentMethods,
+        customImages: state.customImages,
+        customMenuItems: state.customMenuItems,
+        removedMenuItems: state.removedMenuItems,
+        printerConfig: state.printerConfig,
+        taxConfig: state.taxConfig,
+      }),
+    }
+  )
+);
